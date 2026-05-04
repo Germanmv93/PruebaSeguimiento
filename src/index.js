@@ -31,6 +31,39 @@ const DETAIL_FIELDS = [
   'customfield_10310',
 ];
 
+resolver.define('debugAssets', async () => {
+  try {
+    const wsResponse = await api.asApp().requestJira(
+      route`/rest/servicedeskapi/assets/workspace`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    const wsData = await wsResponse.json();
+    const workspaceId = wsData.values?.[0]?.workspaceId;
+    if (!workspaceId) return { error: 'no workspace', wsData };
+
+    const schemaResponse = await api.asApp().requestJira(
+      route`/jsm/assets/workspace/${workspaceId}/v1/objectschema/list`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    const schemaData = await schemaResponse.json();
+    const schemas = schemaData.values || schemaData || [];
+    const schema = Array.isArray(schemas)
+      ? schemas.find(s => s.name === 'Informacion de Proyecto')
+      : null;
+
+    if (!schema) return { error: 'no schema', schemas: JSON.stringify(schemas).substring(0, 300) };
+
+    const typesResponse = await api.asApp().requestJira(
+      route`/jsm/assets/workspace/${workspaceId}/v1/objectschema/${schema.id}/objecttypes`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    const typesData = await typesResponse.json();
+    return { schemaId: schema.id, types: typesData };
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
 resolver.define('getEspacios', async () => {
   try {
     // Paso 1: obtener workspaceId de Assets
