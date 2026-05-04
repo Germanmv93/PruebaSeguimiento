@@ -56,17 +56,121 @@ function parseCSV(text) {
 }
 
 function downloadTemplate() {
-  const exampleInd = ['SI', '', 'OB', 'Retraso en contrato', 'SI', '', 'SI', '', 'SI', '', 'SI', '', 'SI', '', 'SI', '',
-    'SI', '', 'SI', '', 'RP', 'Margen bajo en Q2', 'SI', '', 'SI', '', 'SI', '', 'SI', '', 'SI', '', 'SI', ''];
-  const rows = [
-    TEMPLATE_HEADERS.join(';'),
-    ['AFFINITY', '2026-05-01', ...exampleInd, 'Seguimiento mensual de mayo'].join(';'),
-    ['NOMBRE_PROYECTO', 'YYYY-MM-DD', ...Array(34).fill('SI'), '', ''].join(';'),
-  ];
-  const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  // Estilos de celda
+  const th = (bg, color = 'FFFFFF', bold = true) =>
+    `background-color:${bg};color:#${color};font-weight:${bold ? 'bold' : 'normal'};` +
+    `text-align:center;vertical-align:middle;border:1px solid #CCCCCC;padding:6px 8px;font-size:12px;white-space:nowrap;`;
+
+  const td = (bg = 'FFFFFF', color = '172B4D', italic = false) =>
+    `background-color:#${bg};color:#${color};border:1px solid #E0E0E0;padding:5px 8px;` +
+    `font-size:12px;${italic ? 'font-style:italic;color:#888;' : ''}`;
+
+  // Fila de cabecera
+  let headerRow = `
+    <td style="${th('#1D4ED8')}">Proyecto</td>
+    <td style="${th('#1D4ED8')}">Fecha</td>
+  `;
+  FIELD_PAIRS.forEach(p => {
+    headerRow += `<td style="${th('#15803D')}">✦ ${p.label}</td>`;
+    headerRow += `<td style="${th('#D1FAE5', '065F46')}">✎ Detalle ${p.label}</td>`;
+  });
+  headerRow += `<td style="${th('#374151')}">Descripción</td>`;
+
+  // Fila de ejemplo
+  const exampleData = {
+    Cobro: 'SI', 'Det.Cobro': '',
+    Facturacion: 'OB', 'Det.Facturacion': 'Retraso en facturación Q2',
+    Renovacion: 'SI', 'Det.Renovacion': '',
+    Confianza: 'SI', 'Det.Confianza': '',
+    'R.produccion': 'SI', 'Det.Rproduccion': '',
+    'R.comercial': 'SI', 'Det.Rcomercia': '',
+    Localizacion: 'SI', 'Det.Localizacion': '',
+    Oportunidades: 'SI', 'Det.Oportunidades': '',
+    Calidad: 'SI', 'Det.Calidad': '',
+    Planificacion: 'RP', 'Det.Planificacion': 'Desviación en planificación del proyecto',
+    Margen: 'SI', 'Det.Margen': '',
+    Alcance: 'SI', 'Det.Alcance': '',
+    Estadoanimo: 'SI', 'Det.Estadoanimo': '',
+    Cohesion: 'SI', 'Det.Cohesion': '',
+    Capacidad: 'SI', 'Det.Capacidad': '',
+    Fugatalento: 'OB', 'Det.Fugatalento': 'Riesgo de baja de un perfil senior',
+    Conocimiento: 'SI', 'Det.Conocimiento': '',
+  };
+  const STATUS_BG = { SI: 'F0FDF4', OB: 'FEFCE8', RP: 'FFF5F5' };
+  const STATUS_FG = { SI: '15803D', OB: '92400E', RP: 'B91C1C' };
+
+  let exampleRow = `
+    <td style="${td('EFF6FF', '1D4ED8')}"><b>AFFINITY</b></td>
+    <td style="${td('EFF6FF', '1D4ED8')}">01/05/2026</td>
+  `;
+  FIELD_PAIRS.forEach(p => {
+    const v = exampleData[p.indCol] || 'SI';
+    const det = exampleData[p.detCol] || '';
+    exampleRow += `<td style="${td(STATUS_BG[v], STATUS_FG[v])}"><b>${v}</b></td>`;
+    exampleRow += `<td style="${td('FFFFFF', '5E6C84')}">${det || ''}</td>`;
+  });
+  exampleRow += `<td style="${td()}">Seguimiento mensual</td>`;
+
+  // Fila vacía para rellenar
+  let emptyRow = `
+    <td style="${td('F8F9FF', '97A0AF', true)}" colspan="1"><i>Nombre del proyecto</i></td>
+    <td style="${td('F8F9FF', '97A0AF', true)}"><i>YYYY-MM-DD</i></td>
+  `;
+  FIELD_PAIRS.forEach(() => {
+    emptyRow += `<td style="${td('F9FFF9')}"></td>`;
+    emptyRow += `<td style="${td()}"></td>`;
+  });
+  emptyRow += `<td style="${td()}"></td>`;
+
+  const html = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:x="urn:schemas-microsoft-com:office:excel"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="UTF-8">
+      <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
+        <x:ExcelWorksheet><x:Name>Seguimientos</x:Name>
+        <x:WorksheetOptions>
+          <x:FreezePanes/>
+          <x:SplitHorizontal>1</x:SplitHorizontal>
+          <x:TopRowBottomPane>1</x:TopRowBottomPane>
+          <x:ActivePane>2</x:ActivePane>
+        </x:WorksheetOptions>
+        </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+    </head>
+    <body>
+      <table style="border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;">
+        <tr style="height:32px;">${headerRow}</tr>
+        <tr style="height:26px;">${exampleRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+        <tr style="height:26px;">${emptyRow}</tr>
+      </table>
+      <br/>
+      <table style="font-family:Segoe UI,Arial,sans-serif;font-size:11px;color:#5E6C84;">
+        <tr><td style="padding:4px 8px;background:#F4F5F7;border-radius:4px;">
+          <b>Valores válidos para indicadores:</b> &nbsp;
+          <span style="background:#D1FAE5;color:#065F46;padding:2px 6px;border-radius:3px;font-weight:bold;">SI</span> Sin Incidencias &nbsp;
+          <span style="background:#FEF9C3;color:#92400E;padding:2px 6px;border-radius:3px;font-weight:bold;">OB</span> Observacion &nbsp;
+          <span style="background:#FEE2E2;color:#B91C1C;padding:2px 6px;border-radius:3px;font-weight:bold;">RP</span> Riesgo o Problema
+        </td></tr>
+      </table>
+    </body></html>
+  `;
+
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'plantilla_seguimiento.csv'; a.click();
+  a.href = url;
+  a.download = 'plantilla_seguimiento.xls';
+  a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -143,11 +247,11 @@ function BulkUpload({ espacios }) {
       {/* Instrucciones */}
       <div className="bulk-instructions">
         <div className="bulk-instructions-text">
-          <strong>CSV separado por <code>;</code></strong> — cada indicador seguido de su campo de detalle.<br />
-          Valores: <code>SI</code> · <code>OB</code> · <code>RP</code> — el proyecto se puede corregir en la vista previa.
+          <strong>Descarga la plantilla Excel</strong>, rellénala y súbela como CSV (Archivo → Guardar como → CSV delimitado por punto y coma).<br />
+          Valores indicadores: <code>SI</code> · <code>OB</code> · <code>RP</code> — el proyecto se puede corregir en la vista previa.
         </div>
         <button className="btn-secondary" type="button" onClick={downloadTemplate}>
-          ⬇ Descargar plantilla
+          ⬇ Descargar plantilla Excel
         </button>
       </div>
 
