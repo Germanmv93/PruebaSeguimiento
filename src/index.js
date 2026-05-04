@@ -105,14 +105,14 @@ resolver.define('getEspacios', async () => {
       return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
     }
 
-    // Paso 2: dividir en rangos alfabéticos para superar el límite de 25 por query
+    // Paso 2: dos queries con orden inverso — ASC trae A-M, DESC trae Z-N
     const BASE = 'objectType = "Informacion de Proyecto"';
-    const [rangeA, rangeN] = await Promise.all([
-      fetchAql(workspaceId, `${BASE} AND Name <= "M" ORDER BY Name ASC`),
-      fetchAql(workspaceId, `${BASE} AND Name > "M" ORDER BY Name ASC`),
+    const [asc, desc] = await Promise.all([
+      fetchAql(workspaceId, `${BASE} ORDER BY Name ASC`),
+      fetchAql(workspaceId, `${BASE} ORDER BY Name DESC`),
     ]);
 
-    const allItems = [...rangeA, ...rangeN];
+    const allItems = [...asc, ...desc];
 
     // Deduplicar por objectKey
     const seen = new Set();
