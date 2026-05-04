@@ -1,80 +1,47 @@
 import React, { useState, useRef } from 'react';
 import { invoke } from '@forge/bridge';
 
-const INDICATOR_MAP = {
-  'Cobro':          'customfield_10260',
-  'Facturacion':    'customfield_10261',
-  'Renovacion':     'customfield_10264',
-  'Confianza':      'customfield_10265',
-  'R.produccion':   'customfield_10266',
-  'R.comercial':    'customfield_10267',
-  'Localizacion':   'customfield_10268',
-  'Oportunidades':  'customfield_10269',
-  'Calidad':        'customfield_10270',
-  'Planificacion':  'customfield_10271',
-  'Margen':         'customfield_10272',
-  'Alcance':        'customfield_10273',
-  'Estadoanimo':    'customfield_10274',
-  'Cohesion':       'customfield_10275',
-  'Capacidad':      'customfield_10276',
-  'Fugatalento':    'customfield_10277',
-  'Conocimiento':   'customfield_10278',
-};
+// Pares: cada indicador con su campo de detalle adyacente
+const FIELD_PAIRS = [
+  { label: 'Cobro',          indCol: 'Cobro',          indId: 'customfield_10260', detCol: 'Det.Cobro',         detId: 'customfield_10289' },
+  { label: 'Facturación',    indCol: 'Facturacion',     indId: 'customfield_10261', detCol: 'Det.Facturacion',   detId: 'customfield_10290' },
+  { label: 'Renovación',     indCol: 'Renovacion',      indId: 'customfield_10264', detCol: 'Det.Renovacion',    detId: 'customfield_10291' },
+  { label: 'Confianza',      indCol: 'Confianza',       indId: 'customfield_10265', detCol: 'Det.Confianza',     detId: 'customfield_10292' },
+  { label: 'R. producción',  indCol: 'R.produccion',    indId: 'customfield_10266', detCol: 'Det.Rproduccion',   detId: 'customfield_10293' },
+  { label: 'R. comercial',   indCol: 'R.comercial',     indId: 'customfield_10267', detCol: 'Det.Rcomercia',     detId: 'customfield_10294' },
+  { label: 'Localización',   indCol: 'Localizacion',    indId: 'customfield_10268', detCol: 'Det.Localizacion',  detId: 'customfield_10295' },
+  { label: 'Oportunidades',  indCol: 'Oportunidades',   indId: 'customfield_10269', detCol: 'Det.Oportunidades', detId: 'customfield_10296' },
+  { label: 'Calidad',        indCol: 'Calidad',         indId: 'customfield_10270', detCol: 'Det.Calidad',       detId: 'customfield_10297' },
+  { label: 'Planificación',  indCol: 'Planificacion',   indId: 'customfield_10271', detCol: 'Det.Planificacion', detId: 'customfield_10298' },
+  { label: 'Margen',         indCol: 'Margen',          indId: 'customfield_10272', detCol: 'Det.Margen',        detId: 'customfield_10299' },
+  { label: 'Alcance',        indCol: 'Alcance',         indId: 'customfield_10273', detCol: 'Det.Alcance',       detId: 'customfield_10300' },
+  { label: 'Estado ánimo',   indCol: 'Estadoanimo',     indId: 'customfield_10274', detCol: 'Det.Estadoanimo',   detId: 'customfield_10301' },
+  { label: 'Cohesión',       indCol: 'Cohesion',        indId: 'customfield_10275', detCol: 'Det.Cohesion',      detId: 'customfield_10302' },
+  { label: 'Capacidad',      indCol: 'Capacidad',       indId: 'customfield_10276', detCol: 'Det.Capacidad',     detId: 'customfield_10303' },
+  { label: 'Fuga talento',   indCol: 'Fugatalento',     indId: 'customfield_10277', detCol: 'Det.Fugatalento',   detId: 'customfield_10304' },
+  { label: 'Conocimiento',   indCol: 'Conocimiento',    indId: 'customfield_10278', detCol: 'Det.Conocimiento',  detId: 'customfield_10305' },
+];
 
-const DETAIL_MAP = {
-  'Det.Cobro':          'customfield_10289',
-  'Det.Facturacion':    'customfield_10290',
-  'Det.Renovacion':     'customfield_10291',
-  'Det.Confianza':      'customfield_10292',
-  'Det.Rproduccion':    'customfield_10293',
-  'Det.Rcomercia':      'customfield_10294',
-  'Det.Localizacion':   'customfield_10295',
-  'Det.Oportunidades':  'customfield_10296',
-  'Det.Calidad':        'customfield_10297',
-  'Det.Planificacion':  'customfield_10298',
-  'Det.Margen':         'customfield_10299',
-  'Det.Alcance':        'customfield_10300',
-  'Det.Estadoanimo':    'customfield_10301',
-  'Det.Cohesion':       'customfield_10302',
-  'Det.Capacidad':      'customfield_10303',
-  'Det.Fugatalento':    'customfield_10304',
-  'Det.Conocimiento':   'customfield_10305',
-};
-
-const INDICATOR_COLS = Object.keys(INDICATOR_MAP);
-const DETAIL_COLS    = Object.keys(DETAIL_MAP);
-
+// Cabeceras del CSV en orden par (indicador, detalle, indicador, detalle...)
 const TEMPLATE_HEADERS = [
   'Proyecto', 'Fecha',
-  // Indicadores (valores: SI / OB / RP)
-  ...INDICATOR_COLS,
-  // Detalles (texto libre)
-  ...DETAIL_COLS,
-  // Descripción general
+  ...FIELD_PAIRS.flatMap(p => [p.indCol, p.detCol]),
   'Descripcion',
 ];
 
-const EXAMPLE_ROW = [
-  'AFFINITY', '2026-05-01',
-  'SI', 'SI', 'OB', 'SI', 'SI', 'SI', 'SI', 'SI',
-  'SI', 'SI', 'RP', 'SI',
-  'SI', 'SI', 'SI', 'SI', 'SI',
-  '', '', 'Retraso en renovación del contrato', '', '', '', '', '',
-  '', '', 'Incidencia en margen Q2', '', '', '', '', '', '',
-  'Seguimiento mensual de mayo',
-];
-
-const STATUS_COLORS = { SI: '#22c55e', OB: '#eab308', RP: '#ef4444' };
+const STATUS_CONFIG = {
+  SI: { color: '#22c55e', bg: '#f0fdf4', label: 'Sin Incidencias' },
+  OB: { color: '#eab308', bg: '#fefce8', label: 'Observacion' },
+  RP: { color: '#ef4444', bg: '#fff5f5', label: 'Riesgo o Problema' },
+};
 
 const normalizeVal = (v = '') => {
-  const c = v.trim().toLowerCase().replace(/\s+/g, '');
+  const c = v.trim().toLowerCase().replace(/[\s.]/g, '');
   if (['si', 'sinincidencias', 'sin', ''].includes(c)) return 'SI';
   if (['ob', 'observacion', 'obs'].includes(c)) return 'OB';
   if (['rp', 'riesgo', 'riesgooproblema', 'problema'].includes(c)) return 'RP';
   return 'SI';
 };
-
-const labelOf = (c) => ({ SI: 'Sin Incidencias', OB: 'Observacion', RP: 'Riesgo o Problema' }[c] || c);
 
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -89,28 +56,23 @@ function parseCSV(text) {
 }
 
 function downloadTemplate() {
+  const exampleInd = ['SI', '', 'OB', 'Retraso en contrato', 'SI', '', 'SI', '', 'SI', '', 'SI', '', 'SI', '', 'SI', '',
+    'SI', '', 'SI', '', 'RP', 'Margen bajo en Q2', 'SI', '', 'SI', '', 'SI', '', 'SI', '', 'SI', '', 'SI', ''];
   const rows = [
     TEMPLATE_HEADERS.join(';'),
-    EXAMPLE_ROW.join(';'),
-    // Segunda fila vacía de ejemplo para que el usuario entienda la estructura
-    ['NOMBRE_PROYECTO', 'YYYY-MM-DD',
-      ...Array(17).fill('SI'),   // indicadores
-      ...Array(17).fill(''),     // detalles
-      '',                         // descripcion
-    ].join(';'),
-  ].join('\n');
-
-  const blob = new Blob(['﻿' + rows], { type: 'text/csv;charset=utf-8;' });
+    ['AFFINITY', '2026-05-01', ...exampleInd, 'Seguimiento mensual de mayo'].join(';'),
+    ['NOMBRE_PROYECTO', 'YYYY-MM-DD', ...Array(34).fill('SI'), '', ''].join(';'),
+  ];
+  const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'plantilla_seguimiento.csv';
-  a.click();
+  a.href = url; a.download = 'plantilla_seguimiento.csv'; a.click();
   URL.revokeObjectURL(url);
 }
 
 function BulkUpload({ espacios }) {
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState([]);       // filas parseadas del CSV
+  const [editRows, setEditRows] = useState([]); // filas editables (proyecto seleccionado)
   const [results, setResults] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
@@ -121,16 +83,26 @@ function BulkUpload({ espacios }) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-      setRows(parseCSV(e.target.result));
+      const parsed = parseCSV(e.target.result);
+      setRows(parsed);
       setResults([]);
+      // Auto-match proyecto con espacios
+      setEditRows(parsed.map(row => {
+        const matched = espacios.find(
+          esp => esp.label.toLowerCase() === (row['Proyecto'] || '').toLowerCase()
+        );
+        return { espacioKey: matched?.key || '', espacioLabel: matched?.label || row['Proyecto'] || '' };
+      }));
     };
     reader.readAsText(file, 'UTF-8');
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    handleFile(e.dataTransfer.files[0]);
+  const updateProyecto = (idx, key) => {
+    const esp = espacios.find(e => e.key === key);
+    setEditRows(prev => prev.map((r, i) => i === idx
+      ? { espacioKey: key, espacioLabel: esp?.label || '' }
+      : r
+    ));
   };
 
   const handleSubmit = async () => {
@@ -142,11 +114,17 @@ function BulkUpload({ espacios }) {
 
     for (let i = 0; i < rows.length; i++) {
       setProgress({ current: i + 1, total: rows.length });
+      const row = rows[i];
+      const edit = editRows[i];
       try {
-        const res = await invoke('createBulkIssue', { row: rows[i], espacios });
-        batchResults.push({ proyecto: rows[i]['Proyecto'], success: true, issueKey: res.issueKey });
+        const res = await invoke('createBulkIssue', {
+          row,
+          espacioKey: edit.espacioKey,
+          espacioLabel: edit.espacioLabel,
+        });
+        batchResults.push({ label: edit.espacioLabel, success: true, issueKey: res.issueKey });
       } catch (err) {
-        batchResults.push({ proyecto: rows[i]['Proyecto'], success: false, error: err.message });
+        batchResults.push({ label: edit.espacioLabel, success: false, error: err.message });
       }
     }
 
@@ -157,6 +135,7 @@ function BulkUpload({ espacios }) {
 
   const successCount = results.filter(r => r.success).length;
   const failCount    = results.filter(r => !r.success).length;
+  const unmatched    = editRows.filter(r => !r.espacioKey).length;
 
   return (
     <div className="bulk-container">
@@ -164,12 +143,11 @@ function BulkUpload({ espacios }) {
       {/* Instrucciones */}
       <div className="bulk-instructions">
         <div className="bulk-instructions-text">
-          <strong>CSV separado por <code>;</code></strong> — Indicadores: <code>SI</code> · <code>OB</code> · <code>RP</code><br />
-          Los campos <em>Det.*</em> son texto libre para el detalle de cada indicador.<br />
-          El nombre del Proyecto debe coincidir con el listado de Assets.
+          <strong>CSV separado por <code>;</code></strong> — cada indicador seguido de su campo de detalle.<br />
+          Valores: <code>SI</code> · <code>OB</code> · <code>RP</code> — el proyecto se puede corregir en la vista previa.
         </div>
         <button className="btn-secondary" type="button" onClick={downloadTemplate}>
-          ⬇ Descargar plantilla completa
+          ⬇ Descargar plantilla
         </button>
       </div>
 
@@ -178,16 +156,11 @@ function BulkUpload({ espacios }) {
         className={`bulk-dropzone${dragOver ? ' drag-over' : ''}`}
         onDragOver={e => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
+        onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
         onClick={() => fileRef.current?.click()}
       >
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv"
-          style={{ display: 'none' }}
-          onChange={e => handleFile(e.target.files[0])}
-        />
+        <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }}
+          onChange={e => handleFile(e.target.files[0])} />
         {rows.length === 0 ? (
           <>
             <div className="bulk-dropzone-icon">📂</div>
@@ -197,22 +170,23 @@ function BulkUpload({ espacios }) {
           </>
         ) : (
           <div className="bulk-dropzone-loaded">
-            ✅ <strong>{rows.length} filas cargadas</strong> — haz clic para cambiar el fichero
+            ✅ <strong>{rows.length} filas cargadas</strong> — clic para cambiar fichero
           </div>
         )}
       </div>
 
-      {/* Preview */}
+      {/* Preview cards */}
       {rows.length > 0 && results.length === 0 && (
         <>
           <div className="bulk-preview-header">
-            <span>{rows.length} seguimientos listos para crear</span>
-            <button
-              className="btn-primary"
-              type="button"
-              onClick={handleSubmit}
-              disabled={isProcessing}
-            >
+            <div>
+              <span><strong>{rows.length}</strong> seguimientos</span>
+              {unmatched > 0 && (
+                <span className="bulk-warn"> · ⚠ {unmatched} sin proyecto asignado</span>
+              )}
+            </div>
+            <button className="btn-primary" type="button" onClick={handleSubmit}
+              disabled={isProcessing || unmatched === rows.length}>
               {isProcessing
                 ? `Creando... ${progress.current}/${progress.total}`
                 : `Crear ${rows.length} seguimientos`}
@@ -221,58 +195,67 @@ function BulkUpload({ espacios }) {
 
           {isProcessing && (
             <div className="bulk-progress-bar-wrap">
-              <div
-                className="bulk-progress-bar"
-                style={{ width: `${(progress.current / progress.total) * 100}%` }}
-              />
+              <div className="bulk-progress-bar"
+                style={{ width: `${(progress.current / progress.total) * 100}%` }} />
             </div>
           )}
 
-          <div className="bulk-table-wrap">
-            <table className="bulk-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Proyecto</th>
-                  <th>Fecha</th>
-                  {INDICATOR_COLS.map(c => (
-                    <th key={c} title={c}>{c.substring(0, 5)}</th>
-                  ))}
-                  <th>Detalles</th>
-                  <th>Descripción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(row => {
-                  const detailCount = DETAIL_COLS.filter(c => row[c]?.trim()).length;
-                  return (
-                    <tr key={row._row}>
-                      <td className="bulk-td-num">{row._row - 1}</td>
-                      <td><strong>{row['Proyecto']}</strong></td>
-                      <td>{row['Fecha']}</td>
-                      {INDICATOR_COLS.map(col => {
-                        const code = normalizeVal(row[col]);
-                        return (
-                          <td key={col} style={{ textAlign: 'center' }}>
-                            <span
-                              className="bulk-status-dot"
-                              style={{ background: STATUS_COLORS[code] }}
-                              title={labelOf(code)}
-                            />
-                          </td>
-                        );
-                      })}
-                      <td style={{ textAlign: 'center', color: detailCount ? '#0052cc' : '#97a0af' }}>
-                        {detailCount > 0 ? `${detailCount} ✎` : '—'}
-                      </td>
-                      <td className="bulk-td-desc" title={row['Descripcion']}>
-                        {row['Descripcion'] || '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          {/* Cards por seguimiento */}
+          <div className="bulk-cards">
+            {rows.map((row, idx) => {
+              const edit = editRows[idx] || {};
+              const desc = row['Descripcion'] || '';
+              return (
+                <div key={idx} className={`bulk-card${!edit.espacioKey ? ' bulk-card-warn' : ''}`}>
+                  {/* Cabecera de la card */}
+                  <div className="bulk-card-header">
+                    <span className="bulk-card-num">#{idx + 1}</span>
+                    <div className="bulk-card-project">
+                      <select
+                        className={`bulk-project-select${!edit.espacioKey ? ' unmatched' : ''}`}
+                        value={edit.espacioKey}
+                        onChange={e => updateProyecto(idx, e.target.value)}
+                      >
+                        <option value="">— Seleccionar proyecto —</option>
+                        {espacios.map(esp => (
+                          <option key={esp.key} value={esp.key}>{esp.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <span className="bulk-card-date">{row['Fecha']}</span>
+                  </div>
+
+                  {/* Grid de indicadores */}
+                  <div className="bulk-card-indicators">
+                    {FIELD_PAIRS.map(pair => {
+                      const code = normalizeVal(row[pair.indCol]);
+                      const det  = row[pair.detCol] || '';
+                      const cfg  = STATUS_CONFIG[code];
+                      return (
+                        <div key={pair.indCol}
+                          className="bulk-ind-item"
+                          style={{ borderLeft: `3px solid ${cfg.color}`, background: cfg.bg }}
+                        >
+                          <div className="bulk-ind-top">
+                            <span className="bulk-ind-label">{pair.label}</span>
+                            <span className="bulk-ind-badge" style={{ background: cfg.color }}>
+                              {code}
+                            </span>
+                          </div>
+                          {det && (
+                            <div className="bulk-ind-detail" title={det}>
+                              ✎ {det.length > 40 ? det.substring(0, 40) + '…' : det}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {desc && <div className="bulk-card-desc">📝 {desc}</div>}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -287,13 +270,11 @@ function BulkUpload({ espacios }) {
           </div>
           <div className="bulk-table-wrap">
             <table className="bulk-table">
-              <thead>
-                <tr><th>Proyecto</th><th>Estado</th><th>Issue / Error</th></tr>
-              </thead>
+              <thead><tr><th>Proyecto</th><th>Estado</th><th>Issue / Error</th></tr></thead>
               <tbody>
                 {results.map((r, i) => (
                   <tr key={i} className={r.success ? '' : 'row-error'}>
-                    <td>{r.proyecto}</td>
+                    <td>{r.label}</td>
                     <td>{r.success ? '✅' : '❌'}</td>
                     <td>{r.success ? <strong>{r.issueKey}</strong> : r.error}</td>
                   </tr>
@@ -302,7 +283,7 @@ function BulkUpload({ espacios }) {
             </table>
           </div>
           <button className="btn-secondary" type="button"
-            onClick={() => { setRows([]); setResults([]); }}>
+            onClick={() => { setRows([]); setEditRows([]); setResults([]); }}>
             Nueva carga
           </button>
         </div>

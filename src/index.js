@@ -153,19 +153,15 @@ resolver.define('getEspacios', async () => {
 
 
 resolver.define('createBulkIssue', async ({ payload }) => {
-  const { row, espacios } = payload;
+  const { row, espacioKey, espacioLabel } = payload;
 
   const mapVal = (v) =>
     BULK_VALUE_MAP[(v || '').trim().toLowerCase().replace(/\s+/g, '')] ||
     '🟢 ⚪ ⚪ Sin Incidencias';
 
-  const proyecto = (row['Proyecto'] || '').trim();
+  const proyecto = espacioLabel || (row['Proyecto'] || '').trim();
   const fecha = (row['Fecha'] || '').trim();
   const descripcion = (row['Descripcion'] || '').trim();
-
-  const espacioKey = (espacios || []).find(
-    e => e.label.toLowerCase() === proyecto.toLowerCase()
-  )?.key;
 
   const fields = {
     project: { key: 'SDE' },
