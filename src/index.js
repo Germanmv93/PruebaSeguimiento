@@ -120,21 +120,20 @@ resolver.define('getEspacios', async () => {
       allItems = [...page0, ...page1, ...page2, ...page3];
     }
 
-    // Filtrar por el objectType.name exacto en el objeto devuelto por la API
-    const firstItem = allItems[0];
-    const sampleType = firstItem?.objectType?.name || firstItem?.type?.name || 'unknown';
-
-    const proyectos = allItems.filter(obj => {
-      const typeName = obj.objectType?.name || obj.type?.name || '';
-      return typeName === 'Informacion de Proyecto';
+    // Deduplicar por objectKey para evitar repetidos cuando la API recicla páginas
+    const seen = new Set();
+    const unique = allItems.filter(obj => {
+      const key = obj.objectKey || obj.id;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
 
     return {
-      espacios: proyectos.map(obj => ({
+      espacios: unique.map(obj => ({
         key: obj.objectKey || obj.id,
         label: obj.label || obj.name,
       })),
-      debug: `total:${allItems.length} filtered:${proyectos.length} sampleType:${sampleType}`,
     };
   } catch (e) {
     return { espacios: [], debug: `catch:${e.message}` };

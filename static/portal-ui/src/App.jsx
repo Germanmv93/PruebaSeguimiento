@@ -68,10 +68,7 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
 
-  const [debugInfo, setDebugInfo] = useState('');
-
   useEffect(() => {
-    invoke('debugAssets').then(res => setDebugInfo(JSON.stringify(res).substring(0, 500)));
     invoke('getEspacios')
       .then(res => setEspacios(res.espacios || []))
       .catch(() => setEspacios([]))
@@ -144,7 +141,6 @@ function App() {
   return (
     <div className="app-container">
       <h1 className="page-title">Seguimiento de Servicios</h1>
-      {debugInfo && <pre style={{fontSize:9,background:'#f0f0f0',padding:8,marginBottom:12,wordBreak:'break-all',whiteSpace:'pre-wrap'}}>{debugInfo}</pre>}
       <p className="page-subtitle">
         Proyecto SDE · Registra el estado de los indicadores del período
       </p>
