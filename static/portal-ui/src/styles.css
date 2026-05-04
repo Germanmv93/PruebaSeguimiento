@@ -68,6 +68,16 @@ body {
   cursor: not-allowed;
 }
 
+.summary-preview {
+  border: 2px solid #dfe1e6;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #42526e;
+  background: #f4f5f7;
+  font-style: italic;
+}
+
 .form-field {
   display: flex;
   flex-direction: column;

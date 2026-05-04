@@ -33,8 +33,24 @@ const DETAIL_FIELDS = [
 
 resolver.define('getEspacios', async () => {
   try {
-    const response = await api.asApp().requestJira(
-      route`/rest/assets/1.0/object/aql`,
+    // Paso 1: obtener el workspaceId de Assets
+    const wsResponse = await api.asApp().requestJira(
+      route`/rest/assets/1.0/workspaceid`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+
+    if (!wsResponse.ok) return { espacios: [], error: 'no_workspace' };
+
+    const wsData = await wsResponse.json();
+    const workspaceId = Array.isArray(wsData)
+      ? wsData[0]?.workspaceId
+      : wsData.workspaceId;
+
+    if (!workspaceId) return { espacios: [], error: 'no_workspace_id' };
+
+    // Paso 2: buscar objetos — primero por tipo, si falla devolver todos
+    const searchResponse = await api.asApp().requestJira(
+      route`/gateway/api/jsm/insight/workspace/${workspaceId}/v1/object/aql`,
       {
         method: 'POST',
         headers: {
@@ -42,25 +58,51 @@ resolver.define('getEspacios', async () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          qlQuery: 'objectType = "Espacios en Jira"',
-          page: 1,
-          resultsPerPage: 100,
-          includeAttributes: true,
+          qlQuery: 'objectType = "Espacios en Jira" ORDER BY label ASC',
+          startAt: 0,
+          maxResults: 100,
         }),
       }
     );
 
-    if (!response.ok) return { espacios: [] };
+    if (!searchResponse.ok) {
+      // Fallback: intentar con el endpoint antiguo sin filtro de tipo
+      const fallback = await api.asApp().requestJira(
+        route`/rest/assets/1.0/object/aql`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            qlQuery: 'label like "%" ORDER BY label ASC',
+            page: 1,
+            resultsPerPage: 100,
+            includeAttributes: false,
+          }),
+        }
+      );
+      if (!fallback.ok) return { espacios: [], error: 'api_failed' };
+      const fb = await fallback.json();
+      return {
+        espacios: (fb.values || []).map(obj => ({
+          key: obj.objectKey,
+          label: obj.label,
+        })),
+      };
+    }
 
-    const data = await response.json();
+    const data = await searchResponse.json();
+    const items = data.values || data.objectEntries || [];
     return {
-      espacios: (data.values || []).map(obj => ({
-        key: obj.objectKey,
-        label: obj.label,
+      espacios: items.map(obj => ({
+        key: obj.objectKey || obj.id,
+        label: obj.label || obj.name || obj.objectKey,
       })),
     };
   } catch (e) {
-    return { espacios: [] };
+    return { espacios: [], error: e.message };
   }
 });
 

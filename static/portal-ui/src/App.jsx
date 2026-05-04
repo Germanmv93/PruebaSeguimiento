@@ -75,15 +75,24 @@ function App() {
       .finally(() => setLoadingEspacios(false));
   }, []);
 
+  // Auto-generar Summary cuando cambia el proyecto o la fecha
+  useEffect(() => {
+    const espacio = espacios.find(e => e.key === formData.espacioKey);
+    const label = espacio ? espacio.label : '';
+    const fecha = formData.customfield_10259 || '';
+    if (label && fecha) {
+      setFormData(prev => ({
+        ...prev,
+        summary: `Seguimiento - ${label} - ${fecha}`,
+      }));
+    }
+  }, [formData.espacioKey, formData.customfield_10259, espacios]);
+
   const handleChange = (fieldId, value) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }));
   };
 
   const handleSubmit = async () => {
-    if (!formData.summary.trim()) {
-      alert('El campo "Summary" es obligatorio.');
-      return;
-    }
     if (!formData.customfield_10259) {
       alert('La "Fecha de seguimiento" es obligatoria.');
       return;
@@ -143,7 +152,7 @@ function App() {
         <span className="legend-item"><span className="legend-dot red" /> Riesgo o Problema</span>
       </div>
 
-      {/* Cabecera: Proyecto + Summary + Fecha */}
+      {/* Cabecera: Proyecto + Fecha + Summary auto */}
       <div className="header-card">
         <div className="form-field">
           <label>Seguimiento del proyecto</label>
@@ -164,15 +173,6 @@ function App() {
           </select>
         </div>
         <div className="form-field">
-          <label>Summary *</label>
-          <input
-            type="text"
-            value={formData.summary}
-            onChange={e => handleChange('summary', e.target.value)}
-            placeholder="Título del seguimiento"
-          />
-        </div>
-        <div className="form-field">
           <label>Fecha de seguimiento *</label>
           <input
             type="date"
@@ -180,6 +180,12 @@ function App() {
             onChange={e => handleChange('customfield_10259', e.target.value)}
           />
         </div>
+        {formData.summary ? (
+          <div className="form-field">
+            <label>Título generado</label>
+            <div className="summary-preview">{formData.summary}</div>
+          </div>
+        ) : null}
       </div>
 
       <div className="indicators-grid">
