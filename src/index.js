@@ -68,13 +68,14 @@ resolver.define('getEspacios', async () => {
     // Paso 2: tres queries con órdenes distintos para cubrir los 53 proyectos
     // ASC cubre A-M, DESC cubre Z-N, Key ASC cubre el hueco del medio
     const BASE = 'objectType = "Informacion de Proyecto"';
-    const [asc, desc, byKey] = await Promise.all([
+    const [asc, desc, byKeyAsc, byKeyDesc] = await Promise.all([
       fetchAql(workspaceId, `${BASE} ORDER BY Name ASC`),
       fetchAql(workspaceId, `${BASE} ORDER BY Name DESC`),
       fetchAql(workspaceId, `${BASE} ORDER BY Key ASC`),
+      fetchAql(workspaceId, `${BASE} ORDER BY Key DESC`),
     ]);
 
-    const allItems = [...asc, ...desc, ...byKey];
+    const allItems = [...asc, ...desc, ...byKeyAsc, ...byKeyDesc];
 
     // Deduplicar por objectKey
     const seen = new Set();
