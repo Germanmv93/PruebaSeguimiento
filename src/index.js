@@ -50,49 +50,18 @@ resolver.define('getEspacios', async () => {
       return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
     }
 
-    // Paso 2: obtener schema ID de "Informacion de Proyecto"
-    const schemaResponse = await api.asApp().requestJira(
-      route`/jsm/assets/workspace/${workspaceId}/v1/objectschema/list`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-
-    let objectTypeId = null;
-    if (schemaResponse.ok) {
-      const schemaData = await schemaResponse.json();
-      const schemas = schemaData.values || schemaData || [];
-      const schema = Array.isArray(schemas)
-        ? schemas.find(s => s.name === 'Informacion de Proyecto')
-        : null;
-
-      if (schema?.id) {
-        // Obtener tipos del schema y encontrar el raíz (sin padre)
-        const typesResponse = await api.asApp().requestJira(
-          route`/jsm/assets/workspace/${workspaceId}/v1/objectschema/${schema.id}/objecttypes/flat`,
-          { headers: { 'Accept': 'application/json' } }
-        );
-        if (typesResponse.ok) {
-          const typesData = await typesResponse.json();
-          const types = Array.isArray(typesData) ? typesData : (typesData.values || []);
-          const rootType = types.find(t =>
-            t.name === 'Informacion de Proyecto' && !t.parentObjectTypeId
-          );
-          objectTypeId = rootType?.id;
-        }
-      }
-    }
-
-    const qlQuery = objectTypeId
-      ? `objectTypeId = ${objectTypeId} ORDER BY label ASC`
-      : 'objectType = "Informacion de Proyecto" ORDER BY label ASC';
-
-    // Paso 3: fetch en paralelo
+    // Paso 2: fetch en paralelo de las 4 primeras páginas
     const fetchPage = async (startAt) => {
       const r = await api.asApp().requestJira(
         route`/jsm/assets/workspace/${workspaceId}/v1/object/aql`,
         {
           method: 'POST',
           headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ qlQuery, startAt, maxResults: 25 }),
+          body: JSON.stringify({
+            qlQuery: 'objectType = "Informacion de Proyecto" ORDER BY label ASC',
+            startAt,
+            maxResults: 25,
+          }),
         }
       );
       if (!r.ok) return [];
@@ -110,17 +79,21 @@ resolver.define('getEspacios', async () => {
       allItems = [...page0, ...page1, ...page2, ...page3];
     }
 
-    // Filtrar solo objetos con prefijo IDP- (los proyectos raíz reales)
-    const proyectos = allItems.filter(obj =>
-      (obj.objectKey || '').startsWith('IDP-') && obj.label
-    );
+    // Filtrar por el objectType.name exacto en el objeto devuelto por la API
+    const firstItem = allItems[0];
+    const sampleType = firstItem?.objectType?.name || firstItem?.type?.name || 'unknown';
+
+    const proyectos = allItems.filter(obj => {
+      const typeName = obj.objectType?.name || obj.type?.name || '';
+      return typeName === 'Informacion de Proyecto';
+    });
 
     return {
       espacios: proyectos.map(obj => ({
-        key: obj.objectKey,
-        label: obj.label,
+        key: obj.objectKey || obj.id,
+        label: obj.label || obj.name,
       })),
-      debug: `ok:${proyectos.length} typeId:${objectTypeId}`,
+      debug: `total:${allItems.length} filtered:${proyectos.length} sampleType:${sampleType}`,
     };
   } catch (e) {
     return { espacios: [], debug: `catch:${e.message}` };
