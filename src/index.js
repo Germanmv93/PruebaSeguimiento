@@ -62,7 +62,7 @@ resolver.define('getEspacios', async () => {
         body: JSON.stringify({
           qlQuery: 'objectType = "Informacion de Proyecto" ORDER BY label ASC',
           startAt: 0,
-          maxResults: 50,
+          maxResults: 100,
         }),
       }
     );
