@@ -54,6 +54,134 @@ const normalizeVal = (v = '') => {
   return 'SI';
 };
 
+/* ─────────────────────────── Generación del Excel ─────────────────────────── */
+function downloadTemplate() {
+  const EXAMPLE = {
+    Cobro: 'SI', 'Det.Cobro': '',
+    Facturacion: 'OB', 'Det.Facturacion': 'Retraso en facturación Q2',
+    Renovacion: 'SI', 'Det.Renovacion': '',
+    Confianza: 'SI', 'Det.Confianza': '',
+    'R.produccion': 'SI', 'Det.Rproduccion': '',
+    'R.comercial': 'SI', 'Det.Rcomercia': '',
+    Localizacion: 'SI', 'Det.Localizacion': '',
+    Oportunidades: 'SI', 'Det.Oportunidades': '',
+    Calidad: 'SI', 'Det.Calidad': '',
+    Planificacion: 'RP', 'Det.Planificacion': 'Desviación en planificación',
+    Margen: 'SI', 'Det.Margen': '',
+    Alcance: 'SI', 'Det.Alcance': '',
+    Estadoanimo: 'SI', 'Det.Estadoanimo': '',
+    Cohesion: 'OB', 'Det.Cohesion': 'Incorporación reciente',
+    Capacidad: 'SI', 'Det.Capacidad': '',
+    Fugatalento: 'SI', 'Det.Fugatalento': '',
+    Conocimiento: 'SI', 'Det.Conocimiento': '',
+  };
+
+  // Colores (ARGB sin #)
+  const C = {
+    blue:      { bg: 'FF1E3A5F', font: 'FFFFFFFF' },
+    cliente:   { bg: 'FF15803D', font: 'FFFFFFFF' },
+    clienteL:  { bg: 'FFD1FAE5', font: 'FF065F46' },
+    proyecto:  { bg: 'FF6D28D9', font: 'FFFFFFFF' },
+    proyectoL: { bg: 'FFEDE9FE', font: 'FF5B21B6' },
+    equipo:    { bg: 'FF1D4ED8', font: 'FFFFFFFF' },
+    equipoL:   { bg: 'FFDBEAFE', font: 'FF1E40AF' },
+    general:   { bg: 'FF374151', font: 'FFFFFFFF' },
+    si:        { bg: 'FFDCFCE7', font: 'FF15803D' },
+    ob:        { bg: 'FFFEF9C3', font: 'FF92400E' },
+    rp:        { bg: 'FFFEE2E2', font: 'FFB91C1C' },
+    empty:     { bg: 'FFFFFFFF', font: 'FF374151' },
+    emptyInd:  { bg: 'FFF7FFF7', font: 'FF15803D' },
+    row:       { bg: 'FFFAFAFA', font: 'FF374151' },
+  };
+
+  const s = (c, bold = false, center = false, wrap = false) => ({
+    fill: { patternType: 'solid', fgColor: { rgb: c.bg } },
+    font: { color: { rgb: c.font }, bold, name: 'Calibri', sz: 11 },
+    alignment: { horizontal: center ? 'center' : 'left', vertical: 'center', wrapText: wrap },
+    border: {
+      top:    { style: 'thin', color: { rgb: 'FFE0E0E0' } },
+      bottom: { style: 'thin', color: { rgb: 'FFE0E0E0' } },
+      left:   { style: 'thin', color: { rgb: 'FFE0E0E0' } },
+      right:  { style: 'thin', color: { rgb: 'FFE0E0E0' } },
+    },
+  });
+
+  // ── Fila 1: cabeceras de sección ─────────────────────────────────
+  const row1 = [{ v: 'Proyecto', s: s(C.blue, true, true) }, { v: 'Fecha (YYYY-MM-DD)', s: s(C.blue, true, true) }];
+  SECTIONS.forEach(sec => {
+    const cInd = sec.name.includes('CLIENTE') ? C.cliente : sec.name.includes('PROYECTO') ? C.proyecto : C.equipo;
+    const cDet = sec.name.includes('CLIENTE') ? C.clienteL : sec.name.includes('PROYECTO') ? C.proyectoL : C.equipoL;
+    sec.pairs.forEach(p => {
+      row1.push({ v: `✦ ${p.label}`, s: s(cInd, true, true) });
+      row1.push({ v: `✎ Detalle ${p.label}`, s: s(cDet, false, false) });
+    });
+  });
+  row1.push({ v: 'Descripción General', s: s(C.general, true, true) });
+
+  // ── Fila 2: ejemplo ──────────────────────────────────────────────
+  const row2 = [
+    { v: 'AFFINITY',   s: s(C.si, true, false) },
+    { v: '2026-05-01', s: s(C.si, false, true) },
+  ];
+  ALL_PAIRS.forEach(p => {
+    const v = EXAMPLE[p.indCol] || 'SI';
+    const det = EXAMPLE[p.detCol] || '';
+    const sc = v === 'SI' ? C.si : v === 'OB' ? C.ob : C.rp;
+    row2.push({ v, s: s(sc, true, true) });
+    row2.push({ v: det, s: s(C.empty, false, false) });
+  });
+  row2.push({ v: 'Seguimiento mensual mayo', s: s(C.row, false, false) });
+
+  // ── Filas vacías ─────────────────────────────────────────────────
+  const emptyRows = Array(15).fill(null).map(() => {
+    const r = [
+      { v: '', s: s(C.empty, false, false) },
+      { v: '', s: s(C.empty, false, true) },
+    ];
+    ALL_PAIRS.forEach(() => {
+      r.push({ v: 'SI', s: s(C.emptyInd, false, true) });
+      r.push({ v: '',   s: s(C.empty, false, false) });
+    });
+    r.push({ v: '', s: s(C.empty, false, false) });
+    return r;
+  });
+
+  // ── Construir worksheet ──────────────────────────────────────────
+  const allRows = [row1, row2, ...emptyRows];
+  const ws = XLSX.utils.aoa_to_sheet(allRows.map(r => r.map(c => c.v)));
+
+  // Aplicar estilos celda a celda
+  allRows.forEach((row, ri) => {
+    row.forEach((cell, ci) => {
+      const addr = XLSX.utils.encode_cell({ r: ri, c: ci });
+      if (ws[addr]) ws[addr].s = cell.s;
+    });
+  });
+
+  // Anchos de columna
+  ws['!cols'] = [
+    { wch: 32 }, { wch: 16 },
+    ...ALL_PAIRS.flatMap(() => [{ wch: 13 }, { wch: 32 }]),
+    { wch: 42 },
+  ];
+
+  // Altura de filas
+  ws['!rows'] = [{ hpt: 28 }, { hpt: 24 }, ...Array(15).fill({ hpt: 22 })];
+
+  // Congelar primera fila
+  ws['!views'] = [{ state: 'frozen', ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Seguimientos');
+
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'plantilla_seguimiento.xlsx'; a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ─────────────────────────── Parseo de archivos ─────────────────────────── */
 function parseAny(file) {
   return new Promise((resolve, reject) => {
@@ -97,28 +225,8 @@ function parseAny(file) {
   });
 }
 
-/* ─────────────────────────── Generación del Excel ─────────────────────────── */
-function downloadTemplate() {
-  // Colores
-  const COL_GENERAL  = { bg: '#374151', fg: '#FFFFFF' };
-  const TOTAL_COLS   = 2 + ALL_PAIRS.length * 2 + 1; // Proyecto+Fecha + pares + Desc
-
-  const cell = (content, bg, fg = '#FFFFFF', bold = true, italic = false, align = 'center', wrap = false) => {
-    const s = [
-      `background-color:${bg}`,
-      `color:${fg}`,
-      bold ? 'font-weight:bold' : '',
-      italic ? 'font-style:italic' : '',
-      `text-align:${align}`,
-      'vertical-align:middle',
-      'border:1px solid rgba(0,0,0,0.15)',
-      'padding:7px 9px',
-      'font-family:Segoe UI,Calibri,Arial,sans-serif',
-      'font-size:12px',
-      wrap ? 'white-space:normal' : 'white-space:nowrap',
-    ].filter(Boolean).join(';');
-    return `<td style="${s}">${content}</td>`;
-  };
+/* ─────────────────────────── OLD HTML template (removed) ─────────────────── */
+function _oldDownloadTemplate() {
 
   // ── Fila 1: Título ──────────────────────────────────────────────
   const titleRow = `<tr style="height:38px">
