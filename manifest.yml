@@ -1,6 +1,13 @@
 modules:
+  jira:projectPage:
+    - key: seguimiento-project-page
+      title: Seguimiento de Servicios
+      layout: basic
+      resource: portal-ui
+      resolver:
+        function: main
   jiraServiceManagement:portalRequestCreatePanel:
-    - key: seguimiento-portal-page
+    - key: seguimiento-portal-panel
       title: Seguimiento de Servicios
       resource: portal-ui
       resolver:
