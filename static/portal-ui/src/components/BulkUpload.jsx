@@ -1,38 +1,49 @@
 import React, { useState, useRef } from 'react';
 import { invoke } from '@forge/bridge';
+import * as XLSX from 'xlsx';
 
-// Pares: cada indicador con su campo de detalle adyacente
-const FIELD_PAIRS = [
-  { label: 'Cobro',          indCol: 'Cobro',          indId: 'customfield_10260', detCol: 'Det.Cobro',         detId: 'customfield_10289' },
-  { label: 'Facturación',    indCol: 'Facturacion',     indId: 'customfield_10261', detCol: 'Det.Facturacion',   detId: 'customfield_10290' },
-  { label: 'Renovación',     indCol: 'Renovacion',      indId: 'customfield_10264', detCol: 'Det.Renovacion',    detId: 'customfield_10291' },
-  { label: 'Confianza',      indCol: 'Confianza',       indId: 'customfield_10265', detCol: 'Det.Confianza',     detId: 'customfield_10292' },
-  { label: 'R. producción',  indCol: 'R.produccion',    indId: 'customfield_10266', detCol: 'Det.Rproduccion',   detId: 'customfield_10293' },
-  { label: 'R. comercial',   indCol: 'R.comercial',     indId: 'customfield_10267', detCol: 'Det.Rcomercia',     detId: 'customfield_10294' },
-  { label: 'Localización',   indCol: 'Localizacion',    indId: 'customfield_10268', detCol: 'Det.Localizacion',  detId: 'customfield_10295' },
-  { label: 'Oportunidades',  indCol: 'Oportunidades',   indId: 'customfield_10269', detCol: 'Det.Oportunidades', detId: 'customfield_10296' },
-  { label: 'Calidad',        indCol: 'Calidad',         indId: 'customfield_10270', detCol: 'Det.Calidad',       detId: 'customfield_10297' },
-  { label: 'Planificación',  indCol: 'Planificacion',   indId: 'customfield_10271', detCol: 'Det.Planificacion', detId: 'customfield_10298' },
-  { label: 'Margen',         indCol: 'Margen',          indId: 'customfield_10272', detCol: 'Det.Margen',        detId: 'customfield_10299' },
-  { label: 'Alcance',        indCol: 'Alcance',         indId: 'customfield_10273', detCol: 'Det.Alcance',       detId: 'customfield_10300' },
-  { label: 'Estado ánimo',   indCol: 'Estadoanimo',     indId: 'customfield_10274', detCol: 'Det.Estadoanimo',   detId: 'customfield_10301' },
-  { label: 'Cohesión',       indCol: 'Cohesion',        indId: 'customfield_10275', detCol: 'Det.Cohesion',      detId: 'customfield_10302' },
-  { label: 'Capacidad',      indCol: 'Capacidad',       indId: 'customfield_10276', detCol: 'Det.Capacidad',     detId: 'customfield_10303' },
-  { label: 'Fuga talento',   indCol: 'Fugatalento',     indId: 'customfield_10277', detCol: 'Det.Fugatalento',   detId: 'customfield_10304' },
-  { label: 'Conocimiento',   indCol: 'Conocimiento',    indId: 'customfield_10278', detCol: 'Det.Conocimiento',  detId: 'customfield_10305' },
+/* ─────────────────────────── Definición de campos ─────────────────────────── */
+const SECTIONS = [
+  {
+    name: 'INDICADORES CLIENTE', color: '#15803D', light: '#DCFCE7', text: '#166534',
+    pairs: [
+      { label: 'Cobro',         indCol: 'Cobro',        indId: 'customfield_10260', detCol: 'Det.Cobro',         detId: 'customfield_10289' },
+      { label: 'Facturación',   indCol: 'Facturacion',  indId: 'customfield_10261', detCol: 'Det.Facturacion',   detId: 'customfield_10290' },
+      { label: 'Renovación',    indCol: 'Renovacion',   indId: 'customfield_10264', detCol: 'Det.Renovacion',    detId: 'customfield_10291' },
+      { label: 'Confianza',     indCol: 'Confianza',    indId: 'customfield_10265', detCol: 'Det.Confianza',     detId: 'customfield_10292' },
+      { label: 'R. producción', indCol: 'R.produccion', indId: 'customfield_10266', detCol: 'Det.Rproduccion',   detId: 'customfield_10293' },
+      { label: 'R. comercial',  indCol: 'R.comercial',  indId: 'customfield_10267', detCol: 'Det.Rcomercia',     detId: 'customfield_10294' },
+      { label: 'Localización',  indCol: 'Localizacion', indId: 'customfield_10268', detCol: 'Det.Localizacion',  detId: 'customfield_10295' },
+      { label: 'Oportunidades', indCol: 'Oportunidades',indId: 'customfield_10269', detCol: 'Det.Oportunidades', detId: 'customfield_10296' },
+    ],
+  },
+  {
+    name: 'INDICADORES PROYECTO', color: '#6D28D9', light: '#EDE9FE', text: '#5B21B6',
+    pairs: [
+      { label: 'Calidad',       indCol: 'Calidad',       indId: 'customfield_10270', detCol: 'Det.Calidad',       detId: 'customfield_10297' },
+      { label: 'Planificación', indCol: 'Planificacion', indId: 'customfield_10271', detCol: 'Det.Planificacion', detId: 'customfield_10298' },
+      { label: 'Margen',        indCol: 'Margen',        indId: 'customfield_10272', detCol: 'Det.Margen',        detId: 'customfield_10299' },
+      { label: 'Alcance',       indCol: 'Alcance',       indId: 'customfield_10273', detCol: 'Det.Alcance',       detId: 'customfield_10300' },
+    ],
+  },
+  {
+    name: 'INDICADORES EQUIPO', color: '#1D4ED8', light: '#DBEAFE', text: '#1E40AF',
+    pairs: [
+      { label: 'Estado ánimo',  indCol: 'Estadoanimo',  indId: 'customfield_10274', detCol: 'Det.Estadoanimo',  detId: 'customfield_10301' },
+      { label: 'Cohesión',      indCol: 'Cohesion',     indId: 'customfield_10275', detCol: 'Det.Cohesion',     detId: 'customfield_10302' },
+      { label: 'Capacidad',     indCol: 'Capacidad',    indId: 'customfield_10276', detCol: 'Det.Capacidad',    detId: 'customfield_10303' },
+      { label: 'Fuga talento',  indCol: 'Fugatalento',  indId: 'customfield_10277', detCol: 'Det.Fugatalento',  detId: 'customfield_10304' },
+      { label: 'Conocimiento',  indCol: 'Conocimiento', indId: 'customfield_10278', detCol: 'Det.Conocimiento', detId: 'customfield_10305' },
+    ],
+  },
 ];
 
-// Cabeceras del CSV en orden par (indicador, detalle, indicador, detalle...)
-const TEMPLATE_HEADERS = [
-  'Proyecto', 'Fecha',
-  ...FIELD_PAIRS.flatMap(p => [p.indCol, p.detCol]),
-  'Descripcion',
-];
+const ALL_PAIRS = SECTIONS.flatMap(s => s.pairs.map(p => ({ ...p, section: s })));
 
-const STATUS_CONFIG = {
-  SI: { color: '#22c55e', bg: '#f0fdf4', label: 'Sin Incidencias' },
-  OB: { color: '#eab308', bg: '#fefce8', label: 'Observacion' },
-  RP: { color: '#ef4444', bg: '#fff5f5', label: 'Riesgo o Problema' },
+const STATUS_CFG = {
+  SI: { color: '#15803D', bg: '#DCFCE7', label: 'Sin Incidencias' },
+  OB: { color: '#92400E', bg: '#FEF9C3', label: 'Observacion' },
+  RP: { color: '#B91C1C', bg: '#FEE2E2', label: 'Riesgo o Problema' },
 };
 
 const normalizeVal = (v = '') => {
@@ -43,41 +54,120 @@ const normalizeVal = (v = '') => {
   return 'SI';
 };
 
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return [];
-  const headers = lines[0].split(';').map(h => h.trim().replace(/^﻿/, ''));
-  return lines.slice(1).map((line, idx) => {
-    const values = line.split(';').map(v => v.trim());
-    const obj = { _row: idx + 2 };
-    headers.forEach((h, i) => { obj[h] = values[i] ?? ''; });
-    return obj;
+/* ─────────────────────────── Parseo de archivos ─────────────────────────── */
+function parseAny(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    const isCsv = file.name.toLowerCase().endsWith('.csv');
+
+    reader.onload = (e) => {
+      try {
+        let rows = [];
+        if (isCsv) {
+          const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
+          const headers = lines[0].split(';').map(h => h.trim().replace(/^﻿/, ''));
+          rows = lines.slice(1).map((line, idx) => {
+            const vals = line.split(';').map(v => v.trim());
+            const obj = { _row: idx + 2 };
+            headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
+            return obj;
+          });
+        } else {
+          const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', raw: false });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const all = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+          // Encuentra la fila cabecera buscando "Proyecto"
+          const headerIdx = all.findIndex(row => row.some(c => String(c).trim() === 'Proyecto'));
+          if (headerIdx === -1) { resolve([]); return; }
+          const headers = all[headerIdx].map(h => String(h).trim());
+          rows = all.slice(headerIdx + 1)
+            .filter(row => row.some(c => c !== ''))
+            .map((row, i) => {
+              const obj = { _row: headerIdx + i + 2 };
+              headers.forEach((h, j) => { obj[h] = String(row[j] || '').trim(); });
+              return obj;
+            });
+        }
+        resolve(rows.filter(r => r['Proyecto'] || r['Fecha']));
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = reject;
+    if (isCsv) reader.readAsText(file, 'UTF-8');
+    else reader.readAsArrayBuffer(file);
   });
 }
 
+/* ─────────────────────────── Generación del Excel ─────────────────────────── */
 function downloadTemplate() {
-  // Estilos de celda
-  const th = (bg, color = 'FFFFFF', bold = true) =>
-    `background-color:${bg};color:#${color};font-weight:${bold ? 'bold' : 'normal'};` +
-    `text-align:center;vertical-align:middle;border:1px solid #CCCCCC;padding:6px 8px;font-size:12px;white-space:nowrap;`;
+  // Colores
+  const COL_GENERAL  = { bg: '#374151', fg: '#FFFFFF' };
+  const TOTAL_COLS   = 2 + ALL_PAIRS.length * 2 + 1; // Proyecto+Fecha + pares + Desc
 
-  const td = (bg = 'FFFFFF', color = '172B4D', italic = false) =>
-    `background-color:#${bg};color:#${color};border:1px solid #E0E0E0;padding:5px 8px;` +
-    `font-size:12px;${italic ? 'font-style:italic;color:#888;' : ''}`;
+  const cell = (content, bg, fg = '#FFFFFF', bold = true, italic = false, align = 'center', wrap = false) => {
+    const s = [
+      `background-color:${bg}`,
+      `color:${fg}`,
+      bold ? 'font-weight:bold' : '',
+      italic ? 'font-style:italic' : '',
+      `text-align:${align}`,
+      'vertical-align:middle',
+      'border:1px solid rgba(0,0,0,0.15)',
+      'padding:7px 9px',
+      'font-family:Segoe UI,Calibri,Arial,sans-serif',
+      'font-size:12px',
+      wrap ? 'white-space:normal' : 'white-space:nowrap',
+    ].filter(Boolean).join(';');
+    return `<td style="${s}">${content}</td>`;
+  };
 
-  // Fila de cabecera
-  let headerRow = `
-    <td style="${th('#1D4ED8')}">Proyecto</td>
-    <td style="${th('#1D4ED8')}">Fecha</td>
-  `;
-  FIELD_PAIRS.forEach(p => {
-    headerRow += `<td style="${th('#15803D')}">✦ ${p.label}</td>`;
-    headerRow += `<td style="${th('#D1FAE5', '065F46')}">✎ Detalle ${p.label}</td>`;
+  // ── Fila 1: Título ──────────────────────────────────────────────
+  const titleRow = `<tr style="height:38px">
+    <td colspan="${TOTAL_COLS}" style="background:linear-gradient(135deg,#1D4ED8,#4338CA);
+      color:white;font-size:16px;font-weight:900;text-align:center;letter-spacing:1px;
+      padding:10px;font-family:Segoe UI,Arial;border-bottom:3px solid #93C5FD;">
+      📊 &nbsp;PLANTILLA SEGUIMIENTO DE SERVICIOS &nbsp;📊
+    </td>
+  </tr>`;
+
+  // ── Fila 2: Cabeceras de sección ─────────────────────────────────
+  let sectionRow = `<tr style="height:26px">`;
+  sectionRow += cell('Datos Generales', COL_GENERAL.bg, COL_GENERAL.fg, true, false, 'center');
+  sectionRow += `<td style="background:${COL_GENERAL.bg};border:1px solid rgba(0,0,0,.15)"></td>`;
+  SECTIONS.forEach(s => {
+    sectionRow += `<td colspan="${s.pairs.length * 2}"
+      style="background:${s.color};color:white;font-weight:bold;text-align:center;
+      font-size:12px;padding:6px;font-family:Segoe UI,Arial;border:1px solid rgba(0,0,0,.15);
+      letter-spacing:.5px;">${s.name}</td>`;
   });
-  headerRow += `<td style="${th('#374151')}">Descripción</td>`;
+  sectionRow += cell('General', '#4B5563', '#FFFFFF');
+  sectionRow += `</tr>`;
 
-  // Fila de ejemplo
-  const exampleData = {
+  // ── Fila 3: Cabeceras de columna ─────────────────────────────────
+  let headerRow = `<tr style="height:32px">`;
+  headerRow += cell('Proyecto',           '#1E3A5F', '#FFFFFF');
+  headerRow += cell('Fecha (YYYY-MM-DD)', '#1E3A5F', '#FFFFFF');
+  SECTIONS.forEach(s => {
+    s.pairs.forEach(p => {
+      headerRow += cell(`✦ ${p.label}`, s.color, '#FFFFFF');
+      headerRow += cell(`✎ Detalle ${p.label}`, s.light, s.text, false, false, 'left');
+    });
+  });
+  headerRow += cell('Descripción General', '#4B5563', '#FFFFFF');
+  headerRow += `</tr>`;
+
+  // ── Fila 4: Leyenda de valores ────────────────────────────────────
+  const legendRow = `<tr style="height:22px">
+    <td colspan="${TOTAL_COLS}" style="background:#F8FAFC;color:#64748B;font-size:11px;
+      text-align:center;font-family:Segoe UI,Arial;border:1px solid #E2E8F0;padding:4px;font-style:italic;">
+      Valores indicadores: &nbsp;
+      <b style="background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:3px;">SI</b> Sin Incidencias &nbsp;&nbsp;
+      <b style="background:#FEF9C3;color:#92400E;padding:1px 6px;border-radius:3px;">OB</b> Observacion &nbsp;&nbsp;
+      <b style="background:#FEE2E2;color:#B91C1C;padding:1px 6px;border-radius:3px;">RP</b> Riesgo o Problema
+    </td>
+  </tr>`;
+
+  // ── Fila 5: Ejemplo ───────────────────────────────────────────────
+  const EXAMPLE = {
     Cobro: 'SI', 'Det.Cobro': '',
     Facturacion: 'OB', 'Det.Facturacion': 'Retraso en facturación Q2',
     Renovacion: 'SI', 'Det.Renovacion': '',
@@ -87,125 +177,108 @@ function downloadTemplate() {
     Localizacion: 'SI', 'Det.Localizacion': '',
     Oportunidades: 'SI', 'Det.Oportunidades': '',
     Calidad: 'SI', 'Det.Calidad': '',
-    Planificacion: 'RP', 'Det.Planificacion': 'Desviación en planificación del proyecto',
+    Planificacion: 'RP', 'Det.Planificacion': 'Desviación en planificación',
     Margen: 'SI', 'Det.Margen': '',
     Alcance: 'SI', 'Det.Alcance': '',
     Estadoanimo: 'SI', 'Det.Estadoanimo': '',
-    Cohesion: 'SI', 'Det.Cohesion': '',
+    Cohesion: 'OB', 'Det.Cohesion': 'Incorporación reciente al equipo',
     Capacidad: 'SI', 'Det.Capacidad': '',
-    Fugatalento: 'OB', 'Det.Fugatalento': 'Riesgo de baja de un perfil senior',
+    Fugatalento: 'SI', 'Det.Fugatalento': '',
     Conocimiento: 'SI', 'Det.Conocimiento': '',
   };
-  const STATUS_BG = { SI: 'F0FDF4', OB: 'FEFCE8', RP: 'FFF5F5' };
-  const STATUS_FG = { SI: '15803D', OB: '92400E', RP: 'B91C1C' };
 
-  let exampleRow = `
-    <td style="${td('EFF6FF', '1D4ED8')}"><b>AFFINITY</b></td>
-    <td style="${td('EFF6FF', '1D4ED8')}">01/05/2026</td>
-  `;
-  FIELD_PAIRS.forEach(p => {
-    const v = exampleData[p.indCol] || 'SI';
-    const det = exampleData[p.detCol] || '';
-    exampleRow += `<td style="${td(STATUS_BG[v], STATUS_FG[v])}"><b>${v}</b></td>`;
-    exampleRow += `<td style="${td('FFFFFF', '5E6C84')}">${det || ''}</td>`;
+  let exampleRow = `<tr style="height:28px">`;
+  exampleRow += cell('AFFINITY', '#EFF6FF', '#1D4ED8', true, false, 'left');
+  exampleRow += cell('2026-05-01', '#EFF6FF', '#1D4ED8', false, false, 'center');
+  ALL_PAIRS.forEach(p => {
+    const v = EXAMPLE[p.indCol] || 'SI';
+    const det = EXAMPLE[p.detCol] || '';
+    const cfg = STATUS_CFG[v];
+    exampleRow += cell(`<b>${v}</b>`, cfg.bg, cfg.color, false, false, 'center');
+    exampleRow += cell(det, '#FAFAFA', '#374151', false, false, 'left');
   });
-  exampleRow += `<td style="${td()}">Seguimiento mensual</td>`;
+  exampleRow += cell('Seguimiento mensual mayo', '#FAFAFA', '#374151', false, false, 'left');
+  exampleRow += `</tr>`;
 
-  // Fila vacía para rellenar
-  let emptyRow = `
-    <td style="${td('F8F9FF', '97A0AF', true)}" colspan="1"><i>Nombre del proyecto</i></td>
-    <td style="${td('F8F9FF', '97A0AF', true)}"><i>YYYY-MM-DD</i></td>
-  `;
-  FIELD_PAIRS.forEach(() => {
-    emptyRow += `<td style="${td('F9FFF9')}"></td>`;
-    emptyRow += `<td style="${td()}"></td>`;
-  });
-  emptyRow += `<td style="${td()}"></td>`;
+  // ── Filas vacías para rellenar ─────────────────────────────────────
+  const emptyRow = () => {
+    let r = `<tr style="height:26px">`;
+    r += cell('', '#F0F9FF', '#94A3B8', false, true, 'left');
+    r += cell('', '#F0F9FF', '#94A3B8', false, true, 'center');
+    ALL_PAIRS.forEach(p => {
+      r += cell('SI', '#F7FFF7', '#15803D', false, false, 'center');
+      r += cell('', '#FFFFFF', '#374151', false, false, 'left');
+    });
+    r += cell('', '#FFFFFF', '#374151', false, false, 'left');
+    r += `</tr>`;
+    return r;
+  };
 
   const html = `
-    <html xmlns:o="urn:schemas-microsoft-com:office:office"
-          xmlns:x="urn:schemas-microsoft-com:office:excel"
-          xmlns="http://www.w3.org/TR/REC-html40">
-    <head>
-      <meta charset="UTF-8">
-      <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
-        <x:ExcelWorksheet><x:Name>Seguimientos</x:Name>
-        <x:WorksheetOptions>
-          <x:FreezePanes/>
-          <x:SplitHorizontal>1</x:SplitHorizontal>
-          <x:TopRowBottomPane>1</x:TopRowBottomPane>
-          <x:ActivePane>2</x:ActivePane>
-        </x:WorksheetOptions>
-        </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
-    </head>
-    <body>
-      <table style="border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;">
-        <tr style="height:32px;">${headerRow}</tr>
-        <tr style="height:26px;">${exampleRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-        <tr style="height:26px;">${emptyRow}</tr>
-      </table>
-      <br/>
-      <table style="font-family:Segoe UI,Arial,sans-serif;font-size:11px;color:#5E6C84;">
-        <tr><td style="padding:4px 8px;background:#F4F5F7;border-radius:4px;">
-          <b>Valores válidos para indicadores:</b> &nbsp;
-          <span style="background:#D1FAE5;color:#065F46;padding:2px 6px;border-radius:3px;font-weight:bold;">SI</span> Sin Incidencias &nbsp;
-          <span style="background:#FEF9C3;color:#92400E;padding:2px 6px;border-radius:3px;font-weight:bold;">OB</span> Observacion &nbsp;
-          <span style="background:#FEE2E2;color:#B91C1C;padding:2px 6px;border-radius:3px;font-weight:bold;">RP</span> Riesgo o Problema
-        </td></tr>
-      </table>
-    </body></html>
-  `;
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:x="urn:schemas-microsoft-com:office:excel"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8">
+  <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
+    <x:ExcelWorksheet><x:Name>Seguimientos</x:Name>
+    <x:WorksheetOptions>
+      <x:FreezePanes/>
+      <x:SplitHorizontal>5</x:SplitHorizontal>
+      <x:TopRowBottomPane>5</x:TopRowBottomPane>
+      <x:ActivePane>2</x:ActivePane>
+    </x:WorksheetOptions>
+    </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+</head>
+<body>
+<table style="border-collapse:collapse;">
+  ${titleRow}
+  ${sectionRow}
+  ${headerRow}
+  ${legendRow}
+  ${exampleRow}
+  ${Array(15).fill(0).map(emptyRow).join('')}
+</table>
+</body></html>`;
 
   const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'plantilla_seguimiento.xls';
-  a.click();
+  const a = document.createElement('a'); a.href = url;
+  a.download = 'plantilla_seguimiento.xls'; a.click();
   URL.revokeObjectURL(url);
 }
 
+/* ─────────────────────────── Componente principal ─────────────────────────── */
 function BulkUpload({ espacios }) {
-  const [rows, setRows] = useState([]);       // filas parseadas del CSV
-  const [editRows, setEditRows] = useState([]); // filas editables (proyecto seleccionado)
+  const [rows, setRows]       = useState([]);
+  const [editRows, setEditRows] = useState([]);
   const [results, setResults] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [dragOver, setDragOver] = useState(false);
+  const [parseError, setParseError] = useState('');
   const fileRef = useRef();
 
-  const handleFile = (file) => {
+  const handleFile = async (file) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const parsed = parseCSV(e.target.result);
+    setParseError('');
+    try {
+      const parsed = await parseAny(file);
       setRows(parsed);
       setResults([]);
-      // Auto-match proyecto con espacios
       setEditRows(parsed.map(row => {
-        const matched = espacios.find(
-          esp => esp.label.toLowerCase() === (row['Proyecto'] || '').toLowerCase()
-        );
-        return { espacioKey: matched?.key || '', espacioLabel: matched?.label || row['Proyecto'] || '' };
+        const m = espacios.find(e => e.label.toLowerCase() === (row['Proyecto'] || '').toLowerCase());
+        return { espacioKey: m?.key || '', espacioLabel: m?.label || row['Proyecto'] || '' };
       }));
-    };
-    reader.readAsText(file, 'UTF-8');
+    } catch (e) {
+      setParseError('No se pudo leer el archivo. Asegúrate de usar la plantilla descargada.');
+    }
   };
 
   const updateProyecto = (idx, key) => {
     const esp = espacios.find(e => e.key === key);
-    setEditRows(prev => prev.map((r, i) => i === idx
-      ? { espacioKey: key, espacioLabel: esp?.label || '' }
-      : r
+    setEditRows(prev => prev.map((r, i) =>
+      i === idx ? { espacioKey: key, espacioLabel: esp?.label || '' } : r
     ));
   };
 
@@ -214,25 +287,23 @@ function BulkUpload({ espacios }) {
     setIsProcessing(true);
     setResults([]);
     setProgress({ current: 0, total: rows.length });
-    const batchResults = [];
+    const out = [];
 
     for (let i = 0; i < rows.length; i++) {
       setProgress({ current: i + 1, total: rows.length });
-      const row = rows[i];
-      const edit = editRows[i];
       try {
         const res = await invoke('createBulkIssue', {
-          row,
-          espacioKey: edit.espacioKey,
-          espacioLabel: edit.espacioLabel,
+          row: rows[i],
+          espacioKey: editRows[i]?.espacioKey || '',
+          espacioLabel: editRows[i]?.espacioLabel || '',
         });
-        batchResults.push({ label: edit.espacioLabel, success: true, issueKey: res.issueKey });
+        out.push({ label: editRows[i]?.espacioLabel, success: true, issueKey: res.issueKey });
       } catch (err) {
-        batchResults.push({ label: edit.espacioLabel, success: false, error: err.message });
+        out.push({ label: editRows[i]?.espacioLabel, success: false, error: err.message });
       }
     }
 
-    setResults(batchResults);
+    setResults(out);
     setIsProcessing(false);
     setProgress({ current: 0, total: 0 });
   };
@@ -247,8 +318,8 @@ function BulkUpload({ espacios }) {
       {/* Instrucciones */}
       <div className="bulk-instructions">
         <div className="bulk-instructions-text">
-          <strong>Descarga la plantilla Excel</strong>, rellénala y súbela como CSV (Archivo → Guardar como → CSV delimitado por punto y coma).<br />
-          Valores indicadores: <code>SI</code> · <code>OB</code> · <code>RP</code> — el proyecto se puede corregir en la vista previa.
+          <strong>Descarga la plantilla Excel</strong>, rellena los seguimientos y súbela directamente.<br />
+          Acepta <code>.xlsx</code> / <code>.xls</code> / <code>.csv</code> — el proyecto se puede ajustar en la vista previa.
         </div>
         <button className="btn-secondary" type="button" onClick={downloadTemplate}>
           ⬇ Descargar plantilla Excel
@@ -263,13 +334,16 @@ function BulkUpload({ espacios }) {
         onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
         onClick={() => fileRef.current?.click()}
       >
-        <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }}
-          onChange={e => handleFile(e.target.files[0])} />
+        <input ref={fileRef} type="file" accept=".csv,.xls,.xlsx"
+          style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
         {rows.length === 0 ? (
           <>
             <div className="bulk-dropzone-icon">📂</div>
             <div className="bulk-dropzone-text">
-              Arrastra el CSV aquí o <span className="link-style">haz clic para seleccionar</span>
+              Arrastra tu Excel o CSV aquí, o <span className="link-style">haz clic para seleccionar</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#97a0af', marginTop: 6 }}>
+              Formatos aceptados: .xlsx · .xls · .csv
             </div>
           </>
         ) : (
@@ -279,15 +353,19 @@ function BulkUpload({ espacios }) {
         )}
       </div>
 
-      {/* Preview cards */}
+      {parseError && (
+        <div style={{ background:'#FEE2E2', color:'#B91C1C', padding:'10px 16px', borderRadius:6, fontSize:13 }}>
+          ⚠ {parseError}
+        </div>
+      )}
+
+      {/* Cards de preview */}
       {rows.length > 0 && results.length === 0 && (
         <>
           <div className="bulk-preview-header">
             <div>
-              <span><strong>{rows.length}</strong> seguimientos</span>
-              {unmatched > 0 && (
-                <span className="bulk-warn"> · ⚠ {unmatched} sin proyecto asignado</span>
-              )}
+              <strong>{rows.length}</strong> seguimientos
+              {unmatched > 0 && <span className="bulk-warn"> · ⚠ {unmatched} sin proyecto</span>}
             </div>
             <button className="btn-primary" type="button" onClick={handleSubmit}
               disabled={isProcessing || unmatched === rows.length}>
@@ -304,14 +382,11 @@ function BulkUpload({ espacios }) {
             </div>
           )}
 
-          {/* Cards por seguimiento */}
           <div className="bulk-cards">
             {rows.map((row, idx) => {
               const edit = editRows[idx] || {};
-              const desc = row['Descripcion'] || '';
               return (
                 <div key={idx} className={`bulk-card${!edit.espacioKey ? ' bulk-card-warn' : ''}`}>
-                  {/* Cabecera de la card */}
                   <div className="bulk-card-header">
                     <span className="bulk-card-num">#{idx + 1}</span>
                     <div className="bulk-card-project">
@@ -321,42 +396,46 @@ function BulkUpload({ espacios }) {
                         onChange={e => updateProyecto(idx, e.target.value)}
                       >
                         <option value="">— Seleccionar proyecto —</option>
-                        {espacios.map(esp => (
-                          <option key={esp.key} value={esp.key}>{esp.label}</option>
+                        {espacios.map(e => (
+                          <option key={e.key} value={e.key}>{e.label}</option>
                         ))}
                       </select>
                     </div>
-                    <span className="bulk-card-date">{row['Fecha']}</span>
+                    <span className="bulk-card-date">📅 {row['Fecha']}</span>
                   </div>
 
-                  {/* Grid de indicadores */}
-                  <div className="bulk-card-indicators">
-                    {FIELD_PAIRS.map(pair => {
-                      const code = normalizeVal(row[pair.indCol]);
-                      const det  = row[pair.detCol] || '';
-                      const cfg  = STATUS_CONFIG[code];
-                      return (
-                        <div key={pair.indCol}
-                          className="bulk-ind-item"
-                          style={{ borderLeft: `3px solid ${cfg.color}`, background: cfg.bg }}
-                        >
-                          <div className="bulk-ind-top">
-                            <span className="bulk-ind-label">{pair.label}</span>
-                            <span className="bulk-ind-badge" style={{ background: cfg.color }}>
-                              {code}
-                            </span>
-                          </div>
-                          {det && (
-                            <div className="bulk-ind-detail" title={det}>
-                              ✎ {det.length > 40 ? det.substring(0, 40) + '…' : det}
+                  {SECTIONS.map(sec => (
+                    <div key={sec.name} className="bulk-card-section">
+                      <div className="bulk-section-title" style={{ background: sec.color }}>
+                        {sec.name}
+                      </div>
+                      <div className="bulk-card-indicators">
+                        {sec.pairs.map(p => {
+                          const code = normalizeVal(row[p.indCol]);
+                          const det  = row[p.detCol] || '';
+                          const cfg  = STATUS_CFG[code];
+                          return (
+                            <div key={p.indCol} className="bulk-ind-item"
+                              style={{ borderLeft: `3px solid ${cfg.color}`, background: cfg.bg }}>
+                              <div className="bulk-ind-top">
+                                <span className="bulk-ind-label">{p.label}</span>
+                                <span className="bulk-ind-badge" style={{ background: cfg.color }}>
+                                  {code}
+                                </span>
+                              </div>
+                              {det && (
+                                <div className="bulk-ind-detail" title={det}>✎ {det.length > 45 ? det.slice(0, 45) + '…' : det}</div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
 
-                  {desc && <div className="bulk-card-desc">📝 {desc}</div>}
+                  {row['Descripcion'] && (
+                    <div className="bulk-card-desc">📝 {row['Descripcion']}</div>
+                  )}
                 </div>
               );
             })}

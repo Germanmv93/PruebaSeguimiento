@@ -925,6 +925,17 @@ body {
   background: #fafbfc;
 }
 
+.bulk-card-section { border-top: 1px solid #f1f2f4; }
+
+.bulk-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: white;
+  padding: 4px 12px;
+}
+
 /* ── Legend ──────────────────────────────────────── */
 .legend {
   display: flex;
