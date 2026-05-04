@@ -3,6 +3,7 @@ import api, { route } from '@forge/api';
 
 const resolver = new Resolver();
 
+// Solo los campos que existen en el issue type 10063 (confirmado via createmeta)
 const INDICATOR_FIELDS = [
   'customfield_10260', 'customfield_10261', 'customfield_10264',
   'customfield_10265', 'customfield_10266', 'customfield_10267',
@@ -11,8 +12,6 @@ const INDICATOR_FIELDS = [
   'customfield_10273',
   'customfield_10274', 'customfield_10275', 'customfield_10276',
   'customfield_10277', 'customfield_10278',
-  'customfield_10279', 'customfield_10281', 'customfield_10283',
-  'customfield_10285', 'customfield_10287',
 ];
 
 const PERCENT_FIELDS = [

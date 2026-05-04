@@ -1,9 +1,9 @@
 import React from 'react';
 
 const OPTIONS = [
-  { value: 'Sin Incidencias',   color: 'green',  tooltip: 'Sin Incidencias' },
-  { value: 'Observacion',       color: 'yellow', tooltip: 'Observacion' },
-  { value: 'Riesgo o Problema', color: 'red',    tooltip: 'Riesgo o Problema' },
+  { value: '🟢 ⚪ ⚪ Sin Incidencias',   color: 'green',  tooltip: 'Sin Incidencias' },
+  { value: '⚪ 🟠 ⚪ Observacion',       color: 'yellow', tooltip: 'Observacion' },
+  { value: '⚪ ⚪ 🔴 Riesgo o Problema', color: 'red',    tooltip: 'Riesgo o Problema' },
 ];
 
 function TrafficLight({ fieldId, label, value, onChange, hasDetail, onLabelClick }) {

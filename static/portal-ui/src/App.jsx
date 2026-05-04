@@ -57,7 +57,7 @@ const buildInitialState = () => {
     customfield_10306: '', customfield_10307: '', customfield_10308: '',
     customfield_10309: '', customfield_10310: '',
   };
-  ALL_INDICATOR_IDS.forEach(id => { base[id] = 'Sin Incidencias'; });
+  ALL_INDICATOR_IDS.forEach(id => { base[id] = '🟢 ⚪ ⚪ Sin Incidencias'; });
   return base;
 };
 
