@@ -81,11 +81,14 @@ function App() {
     if (detailId) setPopup({ fieldId, detailId, label });
   };
 
+  const [optDebug, setOptDebug] = useState('');
+
   useEffect(() => {
     invoke('getEspacios')
       .then(res => setEspacios(res.espacios || []))
       .catch(() => setEspacios([]))
       .finally(() => setLoadingEspacios(false));
+    invoke('getFieldOptions').then(res => setOptDebug(JSON.stringify(res)));
   }, []);
 
   // Auto-generar Summary cuando cambia el proyecto o la fecha
@@ -154,6 +157,7 @@ function App() {
   return (
     <div className="app-container">
       <h1 className="page-title">Seguimiento de Servicios</h1>
+      {optDebug && <pre style={{fontSize:9,background:'#fff3cd',padding:8,marginBottom:8,wordBreak:'break-all',whiteSpace:'pre-wrap'}}>{optDebug}</pre>}
       <p className="page-subtitle">
         Proyecto SDE · Registra el estado de los indicadores del período
       </p>
