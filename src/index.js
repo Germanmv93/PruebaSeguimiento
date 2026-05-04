@@ -21,6 +21,26 @@ const BULK_FIELD_MAP = {
   'Conocimiento':  'customfield_10278',
 };
 
+const BULK_DETAIL_MAP = {
+  'Det.Cobro':         'customfield_10289',
+  'Det.Facturacion':   'customfield_10290',
+  'Det.Renovacion':    'customfield_10291',
+  'Det.Confianza':     'customfield_10292',
+  'Det.Rproduccion':   'customfield_10293',
+  'Det.Rcomercia':     'customfield_10294',
+  'Det.Localizacion':  'customfield_10295',
+  'Det.Oportunidades': 'customfield_10296',
+  'Det.Calidad':       'customfield_10297',
+  'Det.Planificacion': 'customfield_10298',
+  'Det.Margen':        'customfield_10299',
+  'Det.Alcance':       'customfield_10300',
+  'Det.Estadoanimo':   'customfield_10301',
+  'Det.Cohesion':      'customfield_10302',
+  'Det.Capacidad':     'customfield_10303',
+  'Det.Fugatalento':   'customfield_10304',
+  'Det.Conocimiento':  'customfield_10305',
+};
+
 const BULK_VALUE_MAP = {
   'si': '🟢 ⚪ ⚪ Sin Incidencias',
   'sinincidencias': '🟢 ⚪ ⚪ Sin Incidencias',
@@ -158,6 +178,18 @@ resolver.define('createBulkIssue', async ({ payload }) => {
 
   Object.entries(BULK_FIELD_MAP).forEach(([col, fieldId]) => {
     fields[fieldId] = { value: mapVal(row[col]) };
+  });
+
+  // Campos de detalle (tipo Paragraph — formato ADF)
+  Object.entries(BULK_DETAIL_MAP).forEach(([col, fieldId]) => {
+    const text = (row[col] || '').trim();
+    if (text) {
+      fields[fieldId] = {
+        version: 1,
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+      };
+    }
   });
 
   if (descripcion) {
