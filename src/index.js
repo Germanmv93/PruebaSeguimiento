@@ -33,61 +33,38 @@ const DETAIL_FIELDS = [
 
 resolver.define('getEspacios', async () => {
   try {
-    // Paso 1: obtener workspaceId — usando asUser() para heredar permisos del usuario
-    const wsResponse = await api.asUser().requestJira(
-      route`/rest/assets/1.0/workspaceid`,
+    // Extraer valores únicos de customfield_10258 de issues existentes en el proyecto
+    const response = await api.asApp().requestJira(
+      route`/rest/api/3/search?jql=project=SDE AND "Espacios en Jira" is not EMPTY&fields=customfield_10258&maxResults=100`,
       { headers: { 'Accept': 'application/json' } }
     );
 
-    if (!wsResponse.ok) {
-      return { espacios: [], debug: `workspace_status:${wsResponse.status}` };
+    if (!response.ok) {
+      return { espacios: [], debug: `jql_status:${response.status}` };
     }
 
-    const wsData = await wsResponse.json();
-    const workspaceId = Array.isArray(wsData)
-      ? wsData[0]?.workspaceId
-      : wsData.workspaceId;
+    const data = await response.json();
+    const seen = new Set();
+    const espacios = [];
 
-    if (!workspaceId) {
-      return { espacios: [], debug: `wsData:${JSON.stringify(wsData).substring(0, 100)}` };
-    }
-
-    // Paso 2: buscar con el workspaceId correcto
-    const searchResponse = await api.asUser().requestJira(
-      route`/gateway/api/jsm/insight/workspace/${workspaceId}/v1/object/aql`,
-      {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          qlQuery: 'objectType = "Espacios en Jira" ORDER BY label ASC',
-          startAt: 0,
-          maxResults: 100,
-        }),
+    for (const issue of (data.issues || [])) {
+      const field = issue.fields?.customfield_10258;
+      if (Array.isArray(field)) {
+        for (const obj of field) {
+          const key = obj.objectKey || obj.id || obj.key;
+          const label = obj.label || obj.name || obj.displayName;
+          if (key && label && !seen.has(key)) {
+            seen.add(key);
+            espacios.push({ key, label });
+          }
+        }
       }
-    );
-
-    if (!searchResponse.ok) {
-      const errText = await searchResponse.text();
-      return {
-        espacios: [],
-        debug: `search_status:${searchResponse.status} err:${errText.substring(0, 150)}`,
-      };
     }
 
-    const data = await searchResponse.json();
-    const items = data.values || data.objectEntries || [];
-    return {
-      espacios: items.map(obj => ({
-        key: obj.objectKey || obj.id,
-        label: obj.label || obj.name || obj.objectKey,
-      })),
-      debug: `ok:${items.length} items`,
-    };
+    espacios.sort((a, b) => a.label.localeCompare(b.label));
+    return { espacios, debug: `ok:${espacios.length}` };
   } catch (e) {
-    return { espacios: [], error: e.message };
+    return { espacios: [], debug: `error:${e.message}` };
   }
 });
 
