@@ -25,6 +25,8 @@ permissions:
     - read:jira-user
     - read:jira-work
     - write:jira-work
+    - read:cmdb-object:jira
+    - read:cmdb-schema:jira
 app:
   id: ari:cloud:ecosystem::app/96826261-e4dd-4ff2-93ab-6236a5f28342
   runtime:

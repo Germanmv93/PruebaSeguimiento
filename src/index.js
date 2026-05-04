@@ -33,38 +33,58 @@ const DETAIL_FIELDS = [
 
 resolver.define('getEspacios', async () => {
   try {
-    // Extraer valores únicos de customfield_10258 de issues existentes en el proyecto
-    const response = await api.asApp().requestJira(
-      route`/rest/api/3/search?jql=project=SDE AND "Espacios en Jira" is not EMPTY&fields=customfield_10258&maxResults=100`,
+    // Paso 1: obtener workspaceId de Assets
+    const wsResponse = await api.asApp().requestJira(
+      route`/rest/assets/1.0/workspaceid`,
       { headers: { 'Accept': 'application/json' } }
     );
 
-    if (!response.ok) {
-      return { espacios: [], debug: `jql_status:${response.status}` };
+    if (!wsResponse.ok) {
+      return { espacios: [], debug: `ws_status:${wsResponse.status}` };
     }
 
-    const data = await response.json();
-    const seen = new Set();
-    const espacios = [];
+    const wsData = await wsResponse.json();
+    const workspaceId = Array.isArray(wsData)
+      ? wsData[0]?.workspaceId
+      : wsData.workspaceId;
 
-    for (const issue of (data.issues || [])) {
-      const field = issue.fields?.customfield_10258;
-      if (Array.isArray(field)) {
-        for (const obj of field) {
-          const key = obj.objectKey || obj.id || obj.key;
-          const label = obj.label || obj.name || obj.displayName;
-          if (key && label && !seen.has(key)) {
-            seen.add(key);
-            espacios.push({ key, label });
-          }
-        }
+    if (!workspaceId) {
+      return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
+    }
+
+    // Paso 2: buscar objetos del tipo "Espacios en Jira"
+    const searchResponse = await api.asApp().requestJira(
+      route`/jsm/assets/workspace/${workspaceId}/v1/object/aql`,
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          qlQuery: 'objectType = "Espacios en Jira" ORDER BY label ASC',
+          startAt: 0,
+          maxResults: 100,
+        }),
       }
+    );
+
+    if (!searchResponse.ok) {
+      const err = await searchResponse.text();
+      return { espacios: [], debug: `aql_status:${searchResponse.status} ${err.substring(0, 100)}` };
     }
 
-    espacios.sort((a, b) => a.label.localeCompare(b.label));
-    return { espacios, debug: `ok:${espacios.length}` };
+    const data = await searchResponse.json();
+    const items = data.values || data.objectEntries || [];
+    return {
+      espacios: items.map(obj => ({
+        key: obj.objectKey || obj.id,
+        label: obj.label || obj.name || obj.objectKey,
+      })),
+      debug: `ok:${items.length}`,
+    };
   } catch (e) {
-    return { espacios: [], debug: `error:${e.message}` };
+    return { espacios: [], debug: `catch:${e.message}` };
   }
 });
 
