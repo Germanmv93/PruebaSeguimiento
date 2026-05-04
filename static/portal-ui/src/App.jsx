@@ -161,21 +161,31 @@ function App() {
       <div className="header-card">
         <div className="form-field">
           <label>Seguimiento del proyecto {debugInfo ? <span style={{color:'red',fontSize:10}}>({debugInfo})</span> : null}</label>
-          <select
-            value={formData.espacioKey}
-            onChange={e => handleChange('espacioKey', e.target.value)}
-            disabled={loadingEspacios}
-            className="select-field"
-          >
-            <option value="">
-              {loadingEspacios ? 'Cargando proyectos...' : '— Seleccionar proyecto —'}
-            </option>
-            {espacios.map(esp => (
-              <option key={esp.key} value={esp.key}>
-                {esp.label}
+          {!loadingEspacios && espacios.length === 0 ? (
+            <input
+              type="text"
+              className="select-field"
+              placeholder="Nombre del proyecto"
+              value={formData.espacioKey}
+              onChange={e => handleChange('espacioKey', e.target.value)}
+            />
+          ) : (
+            <select
+              value={formData.espacioKey}
+              onChange={e => handleChange('espacioKey', e.target.value)}
+              disabled={loadingEspacios}
+              className="select-field"
+            >
+              <option value="">
+                {loadingEspacios ? 'Cargando proyectos...' : '— Seleccionar proyecto —'}
               </option>
-            ))}
-          </select>
+              {espacios.map(esp => (
+                <option key={esp.key} value={esp.key}>
+                  {esp.label}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="form-field">
           <label>Fecha de seguimiento *</label>

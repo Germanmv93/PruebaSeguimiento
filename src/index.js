@@ -33,8 +33,8 @@ const DETAIL_FIELDS = [
 
 resolver.define('getEspacios', async () => {
   try {
-    // Paso 1: obtener workspaceId
-    const wsResponse = await api.asApp().requestJira(
+    // Paso 1: obtener workspaceId — usando asUser() para heredar permisos del usuario
+    const wsResponse = await api.asUser().requestJira(
       route`/rest/assets/1.0/workspaceid`,
       { headers: { 'Accept': 'application/json' } }
     );
@@ -53,7 +53,7 @@ resolver.define('getEspacios', async () => {
     }
 
     // Paso 2: buscar con el workspaceId correcto
-    const searchResponse = await api.asApp().requestJira(
+    const searchResponse = await api.asUser().requestJira(
       route`/gateway/api/jsm/insight/workspace/${workspaceId}/v1/object/aql`,
       {
         method: 'POST',
