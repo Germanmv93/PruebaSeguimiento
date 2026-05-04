@@ -50,19 +50,13 @@ resolver.define('getEspacios', async () => {
       return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
     }
 
-    // Paso 2: buscar con paginación (API devuelve máx 25 por página)
-    const allItems = [];
-    let startAt = 0;
-
-    while (true) {
-      const searchResponse = await api.asApp().requestJira(
+    // Paso 2: fetch en paralelo — página 0 primero, luego el resto simultáneo
+    const fetchPage = async (startAt) => {
+      const r = await api.asApp().requestJira(
         route`/jsm/assets/workspace/${workspaceId}/v1/object/aql`,
         {
           method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
           body: JSON.stringify({
             qlQuery: 'objectType = "Informacion de Proyecto" ORDER BY label ASC',
             startAt,
@@ -70,25 +64,30 @@ resolver.define('getEspacios', async () => {
           }),
         }
       );
+      if (!r.ok) return [];
+      const d = await r.json();
+      return d.values || d.objectEntries || [];
+    };
 
-      if (!searchResponse.ok) {
-        const err = await searchResponse.text();
-        return { espacios: [], debug: `aql_status:${searchResponse.status} ${err.substring(0, 100)}` };
-      }
+    const page0 = await fetchPage(0);
+    let allItems = [...page0];
 
-      const data = await searchResponse.json();
-      const items = data.values || data.objectEntries || [];
-      allItems.push(...items);
-
-      if (items.length < 25 || data.isLast === true) break;
-      startAt += items.length;
+    if (page0.length === 25) {
+      const [page1, page2, page3] = await Promise.all([
+        fetchPage(25),
+        fetchPage(50),
+        fetchPage(75),
+      ]);
+      allItems = [...page0, ...page1, ...page2, ...page3];
     }
 
     return {
-      espacios: allItems.map(obj => ({
-        key: obj.objectKey || obj.id,
-        label: obj.label || obj.name || obj.objectKey,
-      })),
+      espacios: allItems
+        .filter(obj => obj.objectKey || obj.id)
+        .map(obj => ({
+          key: obj.objectKey || obj.id,
+          label: obj.label || obj.name || obj.objectKey,
+        })),
       debug: `ok:${allItems.length}`,
     };
   } catch (e) {
