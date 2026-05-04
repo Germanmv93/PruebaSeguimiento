@@ -35,7 +35,7 @@ resolver.define('getEspacios', async () => {
   try {
     // Paso 1: obtener workspaceId de Assets
     const wsResponse = await api.asApp().requestJira(
-      route`/rest/assets/1.0/workspaceid`,
+      route`/rest/servicedeskapi/assets/workspace`,
       { headers: { 'Accept': 'application/json' } }
     );
 
@@ -44,9 +44,7 @@ resolver.define('getEspacios', async () => {
     }
 
     const wsData = await wsResponse.json();
-    const workspaceId = Array.isArray(wsData)
-      ? wsData[0]?.workspaceId
-      : wsData.workspaceId;
+    const workspaceId = wsData.values?.[0]?.workspaceId;
 
     if (!workspaceId) {
       return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
