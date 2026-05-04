@@ -1,8 +1,7 @@
 modules:
-  jira:projectPage:
+  jiraServiceManagement:portalRequestCreatePanel:
     - key: seguimiento-portal-page
       title: Seguimiento de Servicios
-      layout: basic
       resource: portal-ui
       resolver:
         function: main
@@ -19,6 +18,8 @@ permissions:
     - read:jira-user
     - read:jira-work
     - write:jira-work
+  egress:
+    addresses: []
 app:
   id: ari:cloud:ecosystem::app/96826261-e4dd-4ff2-93ab-6236a5f28342
   runtime:

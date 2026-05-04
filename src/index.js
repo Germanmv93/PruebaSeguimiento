@@ -33,7 +33,7 @@ const DETAIL_FIELDS = [
 
 resolver.define('getEspacios', async () => {
   try {
-    const response = await api.asUser().requestJira(
+    const response = await api.asApp().requestJira(
       route`/rest/assets/1.0/object/aql`,
       {
         method: 'POST',
@@ -104,7 +104,7 @@ resolver.define('createIssue', async ({ payload }) => {
     };
   }
 
-  const response = await api.asUser().requestJira(route`/rest/api/3/issue`, {
+  const response = await api.asApp().requestJira(route`/rest/api/3/issue`, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
