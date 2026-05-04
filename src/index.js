@@ -50,28 +50,42 @@ resolver.define('getEspacios', async () => {
       return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
     }
 
-    // Paso 2: obtener el ID exacto del tipo raíz "Informacion de Proyecto"
-    const typeResponse = await api.asApp().requestJira(
-      route`/jsm/assets/workspace/${workspaceId}/v1/objecttype/search?query=Informacion+de+Proyecto`,
+    // Paso 2: obtener schema ID de "Informacion de Proyecto"
+    const schemaResponse = await api.asApp().requestJira(
+      route`/jsm/assets/workspace/${workspaceId}/v1/objectschema/list`,
       { headers: { 'Accept': 'application/json' } }
     );
 
     let objectTypeId = null;
-    if (typeResponse.ok) {
-      const typeData = await typeResponse.json();
-      const types = typeData.values || typeData || [];
-      // El tipo raíz no tiene parentObjectTypeId
-      const rootType = Array.isArray(types)
-        ? types.find(t => !t.parentObjectTypeId && t.name === 'Informacion de Proyecto')
+    if (schemaResponse.ok) {
+      const schemaData = await schemaResponse.json();
+      const schemas = schemaData.values || schemaData || [];
+      const schema = Array.isArray(schemas)
+        ? schemas.find(s => s.name === 'Informacion de Proyecto')
         : null;
-      objectTypeId = rootType?.id;
+
+      if (schema?.id) {
+        // Obtener tipos del schema y encontrar el raíz (sin padre)
+        const typesResponse = await api.asApp().requestJira(
+          route`/jsm/assets/workspace/${workspaceId}/v1/objectschema/${schema.id}/objecttypes/flat`,
+          { headers: { 'Accept': 'application/json' } }
+        );
+        if (typesResponse.ok) {
+          const typesData = await typesResponse.json();
+          const types = Array.isArray(typesData) ? typesData : (typesData.values || []);
+          const rootType = types.find(t =>
+            t.name === 'Informacion de Proyecto' && !t.parentObjectTypeId
+          );
+          objectTypeId = rootType?.id;
+        }
+      }
     }
 
     const qlQuery = objectTypeId
       ? `objectTypeId = ${objectTypeId} ORDER BY label ASC`
       : 'objectType = "Informacion de Proyecto" ORDER BY label ASC';
 
-    // Paso 3: fetch en paralelo con el ID exacto
+    // Paso 3: fetch en paralelo
     const fetchPage = async (startAt) => {
       const r = await api.asApp().requestJira(
         route`/jsm/assets/workspace/${workspaceId}/v1/object/aql`,
@@ -93,15 +107,20 @@ resolver.define('getEspacios', async () => {
       const [page1, page2, page3] = await Promise.all([
         fetchPage(25), fetchPage(50), fetchPage(75),
       ]);
-      allItems = [...page0, ...page1, ...page2, ...page3].filter(obj => obj.label);
+      allItems = [...page0, ...page1, ...page2, ...page3];
     }
 
+    // Filtrar solo objetos con prefijo IDP- (los proyectos raíz reales)
+    const proyectos = allItems.filter(obj =>
+      (obj.objectKey || '').startsWith('IDP-') && obj.label
+    );
+
     return {
-      espacios: allItems.map(obj => ({
-        key: obj.objectKey || obj.id,
-        label: obj.label || obj.name || obj.objectKey,
+      espacios: proyectos.map(obj => ({
+        key: obj.objectKey,
+        label: obj.label,
       })),
-      debug: `ok:${allItems.length} typeId:${objectTypeId}`,
+      debug: `ok:${proyectos.length} typeId:${objectTypeId}`,
     };
   } catch (e) {
     return { espacios: [], debug: `catch:${e.message}` };
