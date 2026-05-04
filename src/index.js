@@ -60,7 +60,7 @@ resolver.define('getEspacios', async () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          qlQuery: 'label like "%" ORDER BY label ASC',
+          qlQuery: 'objectType = "Informacion de Proyecto" ORDER BY label ASC',
           startAt: 0,
           maxResults: 50,
         }),
