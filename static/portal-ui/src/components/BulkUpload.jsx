@@ -55,7 +55,165 @@ const normalizeVal = (v = '') => {
 };
 
 /* ─────────────────────────── Generación del Excel ─────────────────────────── */
-function downloadTemplate() {
+async function downloadTemplate() {
+  const ExcelJS = (await import('exceljs')).default;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Seguimiento de Servicios';
+
+  const ws = wb.addWorksheet('Seguimientos', {
+    views: [{ state: 'frozen', ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }],
+    pageSetup: { orientation: 'landscape', fitToPage: true },
+  });
+
+  // ── Helpers de estilo ────────────────────────────────────────────
+  const fill   = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+  const border = (color = 'FFD1D5DB') => ({
+    top: { style: 'thin', color: { argb: color } },
+    bottom: { style: 'thin', color: { argb: color } },
+    left:  { style: 'thin', color: { argb: color } },
+    right: { style: 'thin', color: { argb: color } },
+  });
+  const font   = (argb, bold = false, sz = 11) => ({ color: { argb }, bold, name: 'Calibri', size: sz });
+  const align  = (h = 'left', v = 'middle', wrap = false) => ({ horizontal: h, vertical: v, wrapText: wrap });
+
+  // ── Colores por columna ──────────────────────────────────────────
+  const getStyle = (colIdx) => {
+    if (colIdx < 2) return { bg: 'FF1E3A5F', fg: 'FFFFFFFF', isHeader: true };
+    let offset = 2;
+    for (const sec of SECTIONS) {
+      const count = sec.pairs.length * 2;
+      if (colIdx < offset + count) {
+        const isDetail = (colIdx - offset) % 2 === 1;
+        if (sec.name.includes('CLIENTE'))
+          return isDetail ? { bg: 'FFD1FAE5', fg: 'FF065F46' } : { bg: 'FF15803D', fg: 'FFFFFFFF', isHeader: true };
+        if (sec.name.includes('PROYECTO'))
+          return isDetail ? { bg: 'FFEDE9FE', fg: 'FF5B21B6' } : { bg: 'FF6D28D9', fg: 'FFFFFFFF', isHeader: true };
+        return isDetail ? { bg: 'FFDBEAFE', fg: 'FF1E40AF' } : { bg: 'FF1D4ED8', fg: 'FFFFFFFF', isHeader: true };
+      }
+      offset += count;
+    }
+    return { bg: 'FF374151', fg: 'FFFFFFFF', isHeader: true };
+  };
+
+  // ── Definir columnas ─────────────────────────────────────────────
+  const colDefs = [
+    { header: 'Proyecto',             width: 35 },
+    { header: 'Fecha (YYYY-MM-DD)',   width: 18 },
+  ];
+  SECTIONS.forEach(sec => sec.pairs.forEach(p => {
+    colDefs.push({ header: `✦ ${p.label}`,          width: 13 });
+    colDefs.push({ header: `✎ Detalle ${p.label}`,  width: 34 });
+  }));
+  colDefs.push({ header: 'Descripción General', width: 42 });
+  ws.columns = colDefs.map(c => ({ ...c, key: c.header }));
+
+  // ── Fila 1: Cabeceras ────────────────────────────────────────────
+  const hRow = ws.getRow(1);
+  hRow.height = 30;
+  colDefs.forEach((c, i) => {
+    const cell = hRow.getCell(i + 1);
+    cell.value = c.header;
+    const st = getStyle(i);
+    cell.fill   = fill(st.bg);
+    cell.font   = font(st.fg, true, 11);
+    cell.alignment = align('center', 'middle', true);
+    cell.border = border('FFB0B0B0');
+  });
+
+  // ── Fila 2: Ejemplo ──────────────────────────────────────────────
+  const EXAMPLE = {
+    Cobro: 'SI',         'Det.Cobro': '',
+    Facturacion: 'OB',   'Det.Facturacion': 'Retraso en facturación Q2',
+    Renovacion: 'SI',    'Det.Renovacion': '',
+    Confianza: 'SI',     'Det.Confianza': '',
+    'R.produccion': 'SI','Det.Rproduccion': '',
+    'R.comercial': 'SI', 'Det.Rcomercia': '',
+    Localizacion: 'SI',  'Det.Localizacion': '',
+    Oportunidades: 'SI', 'Det.Oportunidades': '',
+    Calidad: 'SI',       'Det.Calidad': '',
+    Planificacion: 'RP', 'Det.Planificacion': 'Desviación en planificación',
+    Margen: 'SI',        'Det.Margen': '',
+    Alcance: 'SI',       'Det.Alcance': '',
+    Estadoanimo: 'SI',   'Det.Estadoanimo': '',
+    Cohesion: 'OB',      'Det.Cohesion': 'Incorporación reciente al equipo',
+    Capacidad: 'SI',     'Det.Capacidad': '',
+    Fugatalento: 'SI',   'Det.Fugatalento': '',
+    Conocimiento: 'SI',  'Det.Conocimiento': '',
+  };
+  const STATUS_FILL = {
+    SI: { bg: 'FFDCFCE7', fg: 'FF15803D' },
+    OB: { bg: 'FFFEF9C3', fg: 'FF92400E' },
+    RP: { bg: 'FFFEE2E2', fg: 'FFB91C1C' },
+  };
+
+  const exVals = ['AFFINITY', '2026-05-01'];
+  ALL_PAIRS.forEach(p => { exVals.push(EXAMPLE[p.indCol] || 'SI'); exVals.push(EXAMPLE[p.detCol] || ''); });
+  exVals.push('Seguimiento mensual mayo');
+
+  const exRow = ws.addRow(exVals);
+  exRow.height = 22;
+  exRow.eachCell({ includeEmpty: true }, (cell, ci) => {
+    const idx = ci - 1;
+    const v   = exVals[idx];
+    if (idx >= 2 && (idx - 2) % 2 === 0 && STATUS_FILL[v]) {
+      cell.fill = fill(STATUS_FILL[v].bg);
+      cell.font = font(STATUS_FILL[v].fg, true);
+      cell.alignment = align('center');
+    } else {
+      cell.fill = fill('FFFAFAFA');
+      cell.font = font('FF374151');
+      cell.alignment = align('left');
+    }
+    cell.border = border();
+  });
+
+  // ── Filas vacías con validación ──────────────────────────────────
+  for (let r = 0; r < 15; r++) {
+    const vals = ['', ''];
+    ALL_PAIRS.forEach(() => { vals.push('SI'); vals.push(''); });
+    vals.push('');
+    const row = ws.addRow(vals);
+    row.height = 21;
+    row.eachCell({ includeEmpty: true }, (cell, ci) => {
+      const idx = ci - 1;
+      if (idx >= 2 && (idx - 2) % 2 === 0) {
+        cell.fill = fill('FFF0FFF4');
+        cell.font = font('FF15803D');
+        cell.alignment = align('center');
+        cell.dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: ['"SI,OB,RP"'],
+          showDropDown: false,
+          promptTitle: 'Indicador',
+          prompt: 'SI = Sin Incidencias · OB = Observacion · RP = Riesgo o Problema',
+          errorTitle: 'Valor inválido',
+          error: 'Usa: SI, OB o RP',
+        };
+      } else if (idx >= 2) {
+        cell.fill = fill('FFFFFFFF');
+        cell.font = font('FF374151');
+        cell.alignment = align('left');
+      } else {
+        cell.fill = fill('FFFAFAFA');
+        cell.font = font('FF97A0AF', false, 10);
+        cell.alignment = align('left');
+      }
+      cell.border = border();
+    });
+  }
+
+  // ── Descargar ────────────────────────────────────────────────────
+  const buf  = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'plantilla_seguimiento.xlsx'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ─────────────────────────── OLD (disabled) ────────────────────────────── */
+async function _oldDownloadTemplate() {
   const EXAMPLE = {
     Cobro: 'SI', 'Det.Cobro': '',
     Facturacion: 'OB', 'Det.Facturacion': 'Retraso en facturación Q2',
