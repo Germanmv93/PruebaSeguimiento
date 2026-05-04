@@ -99,19 +99,6 @@ resolver.define('getEspacios', async () => {
   }
 });
 
-resolver.define('getFieldOptions', async () => {
-  const response = await api.asApp().requestJira(
-    route`/rest/api/3/issue/createmeta/SDE/issuetypes/10063`,
-    { headers: { 'Accept': 'application/json' } }
-  );
-  if (!response.ok) return { error: response.status };
-  const data = await response.json();
-  const fields = data.fields || {};
-  const calidad = fields['customfield_10270'];
-  return {
-    options: calidad?.allowedValues?.map(v => ({ id: v.id, value: v.value })) || [],
-  };
-});
 
 resolver.define('createIssue', async ({ payload }) => {
   const { formData } = payload;

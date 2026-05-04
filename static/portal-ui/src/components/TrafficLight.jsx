@@ -2,7 +2,7 @@ import React from 'react';
 
 const OPTIONS = [
   { value: 'Sin Incidencias',   color: 'green',  tooltip: 'Sin Incidencias' },
-  { value: 'Observación',       color: 'yellow', tooltip: 'Observación' },
+  { value: 'Observacion',       color: 'yellow', tooltip: 'Observacion' },
   { value: 'Riesgo o Problema', color: 'red',    tooltip: 'Riesgo o Problema' },
 ];
 
