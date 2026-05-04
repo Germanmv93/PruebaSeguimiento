@@ -1,0 +1,5 @@
+node_modules/
+static/portal-ui/node_modules/
+static/portal-ui/build/
+.forge/
+*.log

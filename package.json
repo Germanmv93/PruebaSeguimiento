@@ -1,0 +1,12 @@
+{
+  "name": "forge-seguimiento",
+  "version": "1.0.0",
+  "description": "App de Seguimiento de Servicios para JSM Portal",
+  "dependencies": {
+    "@forge/api": "^4.0.0",
+    "@forge/resolver": "^1.0.0"
+  },
+  "devDependencies": {
+    "@forge/cli": "^10.0.0"
+  }
+}
