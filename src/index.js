@@ -65,14 +65,16 @@ resolver.define('getEspacios', async () => {
       return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
     }
 
-    // Paso 2: dos queries con orden inverso — ASC trae A-M, DESC trae Z-N
+    // Paso 2: tres queries con órdenes distintos para cubrir los 53 proyectos
+    // ASC cubre A-M, DESC cubre Z-N, Key ASC cubre el hueco del medio
     const BASE = 'objectType = "Informacion de Proyecto"';
-    const [asc, desc] = await Promise.all([
+    const [asc, desc, byKey] = await Promise.all([
       fetchAql(workspaceId, `${BASE} ORDER BY Name ASC`),
       fetchAql(workspaceId, `${BASE} ORDER BY Name DESC`),
+      fetchAql(workspaceId, `${BASE} ORDER BY Key ASC`),
     ]);
 
-    const allItems = [...asc, ...desc];
+    const allItems = [...asc, ...desc, ...byKey];
 
     // Deduplicar por objectKey
     const seen = new Set();
