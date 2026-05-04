@@ -50,18 +50,35 @@ resolver.define('getEspacios', async () => {
       return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
     }
 
-    // Paso 2: fetch en paralelo — página 0 primero, luego el resto simultáneo
+    // Paso 2: obtener el ID exacto del tipo raíz "Informacion de Proyecto"
+    const typeResponse = await api.asApp().requestJira(
+      route`/jsm/assets/workspace/${workspaceId}/v1/objecttype/search?query=Informacion+de+Proyecto`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+
+    let objectTypeId = null;
+    if (typeResponse.ok) {
+      const typeData = await typeResponse.json();
+      const types = typeData.values || typeData || [];
+      // El tipo raíz no tiene parentObjectTypeId
+      const rootType = Array.isArray(types)
+        ? types.find(t => !t.parentObjectTypeId && t.name === 'Informacion de Proyecto')
+        : null;
+      objectTypeId = rootType?.id;
+    }
+
+    const qlQuery = objectTypeId
+      ? `objectTypeId = ${objectTypeId} ORDER BY label ASC`
+      : 'objectType = "Informacion de Proyecto" ORDER BY label ASC';
+
+    // Paso 3: fetch en paralelo con el ID exacto
     const fetchPage = async (startAt) => {
       const r = await api.asApp().requestJira(
         route`/jsm/assets/workspace/${workspaceId}/v1/object/aql`,
         {
           method: 'POST',
           headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            qlQuery: 'objectType = "Informacion de Proyecto" AND "Clave de Proyecto" is not EMPTY ORDER BY label ASC',
-            startAt,
-            maxResults: 25,
-          }),
+          body: JSON.stringify({ qlQuery, startAt, maxResults: 25 }),
         }
       );
       if (!r.ok) return [];
@@ -74,21 +91,17 @@ resolver.define('getEspacios', async () => {
 
     if (page0.length === 25) {
       const [page1, page2, page3] = await Promise.all([
-        fetchPage(25),
-        fetchPage(50),
-        fetchPage(75),
+        fetchPage(25), fetchPage(50), fetchPage(75),
       ]);
-      allItems = [...page0, ...page1, ...page2, ...page3];
+      allItems = [...page0, ...page1, ...page2, ...page3].filter(obj => obj.label);
     }
 
     return {
-      espacios: allItems
-        .filter(obj => obj.objectKey || obj.id)
-        .map(obj => ({
-          key: obj.objectKey || obj.id,
-          label: obj.label || obj.name || obj.objectKey,
-        })),
-      debug: `ok:${allItems.length}`,
+      espacios: allItems.map(obj => ({
+        key: obj.objectKey || obj.id,
+        label: obj.label || obj.name || obj.objectKey,
+      })),
+      debug: `ok:${allItems.length} typeId:${objectTypeId}`,
     };
   } catch (e) {
     return { espacios: [], debug: `catch:${e.message}` };
