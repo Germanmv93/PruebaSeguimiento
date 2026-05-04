@@ -68,15 +68,10 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
 
-  const [debugInfo, setDebugInfo] = useState('');
-
   useEffect(() => {
     invoke('getEspacios')
-      .then(res => {
-        setEspacios(res.espacios || []);
-        if (res.debug) setDebugInfo(res.debug);
-      })
-      .catch(e => { setEspacios([]); setDebugInfo(`catch:${e.message}`); })
+      .then(res => setEspacios(res.espacios || []))
+      .catch(() => setEspacios([]))
       .finally(() => setLoadingEspacios(false));
   }, []);
 
@@ -160,7 +155,7 @@ function App() {
       {/* Cabecera: Proyecto + Fecha + Summary auto */}
       <div className="header-card">
         <div className="form-field">
-          <label>Seguimiento del proyecto {debugInfo ? <span style={{color:'red',fontSize:10}}>({debugInfo})</span> : null}</label>
+          <label>Seguimiento del proyecto</label>
           <select
             value={formData.espacioKey}
             onChange={e => handleChange('espacioKey', e.target.value)}
