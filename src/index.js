@@ -60,9 +60,9 @@ resolver.define('getEspacios', async () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          qlQuery: 'objectType = "Espacios en Jira" ORDER BY label ASC',
+          qlQuery: 'label like "%" ORDER BY label ASC',
           startAt: 0,
-          maxResults: 100,
+          maxResults: 50,
         }),
       }
     );
