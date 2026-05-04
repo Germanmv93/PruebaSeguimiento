@@ -72,10 +72,14 @@ resolver.define('debugAssets', async () => {
   }
 });
 
-const fetchTypePage = async (workspaceId, typeId, page) => {
+const fetchAql = async (workspaceId, qlQuery) => {
   const r = await api.asApp().requestJira(
-    route`/jsm/assets/workspace/${workspaceId}/v1/objecttype/${typeId}/objects?page=${page}&asc=1&orderByTypeAttributeId=0`,
-    { headers: { 'Accept': 'application/json' } }
+    route`/jsm/assets/workspace/${workspaceId}/v1/object/aql`,
+    {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ qlQuery, startAt: 0, maxResults: 25 }),
+    }
   );
   if (!r.ok) return [];
   const d = await r.json();
@@ -101,18 +105,14 @@ resolver.define('getEspacios', async () => {
       return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
     }
 
-    // Paso 2: usar endpoint directo del tipo 43 con paginación por página (no startAt)
-    const OBJECT_TYPE_ID = 43;
-    const allItems = [];
-
-    const [p1, p2, p3, p4] = await Promise.all([
-      fetchTypePage(workspaceId, OBJECT_TYPE_ID, 1),
-      fetchTypePage(workspaceId, OBJECT_TYPE_ID, 2),
-      fetchTypePage(workspaceId, OBJECT_TYPE_ID, 3),
-      fetchTypePage(workspaceId, OBJECT_TYPE_ID, 4),
+    // Paso 2: dividir en rangos alfabéticos para superar el límite de 25 por query
+    const BASE = 'objectType = "Informacion de Proyecto"';
+    const [rangeA, rangeN] = await Promise.all([
+      fetchAql(workspaceId, `${BASE} AND Name <= "M" ORDER BY Name ASC`),
+      fetchAql(workspaceId, `${BASE} AND Name > "M" ORDER BY Name ASC`),
     ]);
 
-    allItems.push(...p1, ...p2, ...p3, ...p4);
+    const allItems = [...rangeA, ...rangeN];
 
     // Deduplicar por objectKey
     const seen = new Set();
