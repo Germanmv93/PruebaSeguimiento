@@ -32,25 +32,8 @@ const DETAIL_FIELDS = [
 ];
 
 resolver.define('getEspacios', async () => {
-  const response = await api.asUser().requestJira(
-    route`/rest/assets/1.0/object/aql`,
-    {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        qlQuery: 'objectType = "Espacios en Jira"',
-        page: 1,
-        resultsPerPage: 100,
-        includeAttributes: true,
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const fallback = await api.asUser().requestJira(
+  try {
+    const response = await api.asUser().requestJira(
       route`/rest/assets/1.0/object/aql`,
       {
         method: 'POST',
@@ -59,30 +42,26 @@ resolver.define('getEspacios', async () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          qlQuery: 'label like "%" ORDER BY label ASC',
+          qlQuery: 'objectType = "Espacios en Jira"',
           page: 1,
           resultsPerPage: 100,
-          includeAttributes: false,
+          includeAttributes: true,
         }),
       }
     );
-    if (!fallback.ok) return { espacios: [] };
-    const data = await fallback.json();
+
+    if (!response.ok) return { espacios: [] };
+
+    const data = await response.json();
     return {
       espacios: (data.values || []).map(obj => ({
         key: obj.objectKey,
         label: obj.label,
       })),
     };
+  } catch (e) {
+    return { espacios: [] };
   }
-
-  const data = await response.json();
-  return {
-    espacios: (data.values || []).map(obj => ({
-      key: obj.objectKey,
-      label: obj.label,
-    })),
-  };
 });
 
 resolver.define('createIssue', async ({ payload }) => {
