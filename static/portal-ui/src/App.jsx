@@ -163,7 +163,7 @@ function App() {
             className="select-field"
           >
             <option value="">
-              {loadingEspacios ? 'Cargando...' : `— Seleccionar proyecto (${espacios.length}) —`}
+              {loadingEspacios ? 'Cargando proyectos...' : '— Seleccionar proyecto —'}
             </option>
             {espacios.map(esp => (
               <option key={esp.key} value={esp.key}>

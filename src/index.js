@@ -31,46 +31,6 @@ const DETAIL_FIELDS = [
   'customfield_10310',
 ];
 
-resolver.define('debugAssets', async () => {
-  try {
-    const wsResponse = await api.asApp().requestJira(
-      route`/rest/servicedeskapi/assets/workspace`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    const wsData = await wsResponse.json();
-    const workspaceId = wsData.values?.[0]?.workspaceId;
-    if (!workspaceId) return { error: 'no workspace' };
-
-    // Traer el primer objeto con atributos para ver su objectType.id y atributos disponibles
-    const aqlResponse = await api.asApp().requestJira(
-      route`/jsm/assets/workspace/${workspaceId}/v1/object/aql`,
-      {
-        method: 'POST',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          qlQuery: 'objectType = "Informacion de Proyecto" ORDER BY Name ASC',
-          startAt: 0,
-          maxResults: 1,
-          includeAttributes: true,
-        }),
-      }
-    );
-    const aqlData = await aqlResponse.json();
-    const firstObj = (aqlData.values || [])[0];
-    return {
-      objectTypeId: firstObj?.objectType?.id,
-      objectTypeName: firstObj?.objectType?.name,
-      objectKey: firstObj?.objectKey,
-      label: firstObj?.label,
-      attributes: firstObj?.attributes?.map(a => ({
-        name: a.objectTypeAttribute?.name,
-        value: a.objectAttributeValues?.[0]?.displayValue,
-      })),
-    };
-  } catch (e) {
-    return { error: e.message };
-  }
-});
 
 const fetchAql = async (workspaceId, qlQuery) => {
   const r = await api.asApp().requestJira(
