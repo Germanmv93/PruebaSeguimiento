@@ -124,8 +124,15 @@ resolver.define('createIssue', async ({ payload }) => {
     if (formData[f] && formData[f] !== '') fields[f] = formData[f];
   });
 
+  // Los campos de detalle son tipo Paragraph (ADF)
+  const toAdf = (text) => ({
+    version: 1,
+    type: 'doc',
+    content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+  });
+
   DETAIL_FIELDS.forEach(f => {
-    if (formData[f] && formData[f] !== '') fields[f] = formData[f];
+    if (formData[f] && formData[f] !== '') fields[f] = toAdf(formData[f]);
   });
 
   if (formData.description) {
