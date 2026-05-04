@@ -182,7 +182,8 @@ function App() {
         <BulkUpload espacios={espacios} />
       )}
 
-      {activeTab === 'individual' && <div className="legend">
+      {activeTab === 'individual' && <>
+      <div className="legend">
         <span className="legend-title">Referencia:</span>
         <span className="legend-item"><span className="legend-dot green" /> Sin Incidencias</span>
         <span className="legend-item"><span className="legend-dot yellow" /> Observación</span>
@@ -311,7 +312,7 @@ function App() {
           )}
         </button>
       </div>
-      </div>}
+      </>}
     </div>
   );
 }
