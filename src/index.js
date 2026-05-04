@@ -39,26 +39,34 @@ resolver.define('debugAssets', async () => {
     );
     const wsData = await wsResponse.json();
     const workspaceId = wsData.values?.[0]?.workspaceId;
-    if (!workspaceId) return { error: 'no workspace', wsData };
+    if (!workspaceId) return { error: 'no workspace' };
 
-    const schemaResponse = await api.asApp().requestJira(
-      route`/jsm/assets/workspace/${workspaceId}/v1/objectschema/list`,
-      { headers: { 'Accept': 'application/json' } }
+    // Traer el primer objeto con atributos para ver su objectType.id y atributos disponibles
+    const aqlResponse = await api.asApp().requestJira(
+      route`/jsm/assets/workspace/${workspaceId}/v1/object/aql`,
+      {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          qlQuery: 'objectType = "Informacion de Proyecto" ORDER BY Name ASC',
+          startAt: 0,
+          maxResults: 1,
+          includeAttributes: true,
+        }),
+      }
     );
-    const schemaData = await schemaResponse.json();
-    const schemas = schemaData.values || schemaData || [];
-    const schema = Array.isArray(schemas)
-      ? schemas.find(s => s.name === 'Informacion de Proyecto')
-      : null;
-
-    if (!schema) return { error: 'no schema', schemas: JSON.stringify(schemas).substring(0, 300) };
-
-    const typesResponse = await api.asApp().requestJira(
-      route`/jsm/assets/workspace/${workspaceId}/v1/objectschema/${schema.id}/objecttypes`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    const typesData = await typesResponse.json();
-    return { schemaId: schema.id, types: typesData };
+    const aqlData = await aqlResponse.json();
+    const firstObj = (aqlData.values || [])[0];
+    return {
+      objectTypeId: firstObj?.objectType?.id,
+      objectTypeName: firstObj?.objectType?.name,
+      objectKey: firstObj?.objectKey,
+      label: firstObj?.label,
+      attributes: firstObj?.attributes?.map(a => ({
+        name: a.objectTypeAttribute?.name,
+        value: a.objectAttributeValues?.[0]?.displayValue,
+      })),
+    };
   } catch (e) {
     return { error: e.message };
   }
