@@ -1,6 +1,39 @@
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
 
+const BULK_FIELD_MAP = {
+  'Cobro':         'customfield_10260',
+  'Facturacion':   'customfield_10261',
+  'Renovacion':    'customfield_10264',
+  'Confianza':     'customfield_10265',
+  'R.produccion':  'customfield_10266',
+  'R.comercial':   'customfield_10267',
+  'Localizacion':  'customfield_10268',
+  'Oportunidades': 'customfield_10269',
+  'Calidad':       'customfield_10270',
+  'Planificacion': 'customfield_10271',
+  'Margen':        'customfield_10272',
+  'Alcance':       'customfield_10273',
+  'Estadoanimo':   'customfield_10274',
+  'Cohesion':      'customfield_10275',
+  'Capacidad':     'customfield_10276',
+  'Fugatalento':   'customfield_10277',
+  'Conocimiento':  'customfield_10278',
+};
+
+const BULK_VALUE_MAP = {
+  'si': '🟢 ⚪ ⚪ Sin Incidencias',
+  'sinincidencias': '🟢 ⚪ ⚪ Sin Incidencias',
+  'sin': '🟢 ⚪ ⚪ Sin Incidencias',
+  'ob': '⚪ 🟠 ⚪ Observacion',
+  'observacion': '⚪ 🟠 ⚪ Observacion',
+  'obs': '⚪ 🟠 ⚪ Observacion',
+  'rp': '⚪ ⚪ 🔴 Riesgo o Problema',
+  'riesgo': '⚪ ⚪ 🔴 Riesgo o Problema',
+  'riesgooproblema': '⚪ ⚪ 🔴 Riesgo o Problema',
+  '': '🟢 ⚪ ⚪ Sin Incidencias',
+};
+
 const resolver = new Resolver();
 
 // Solo los campos que existen en el issue type 10063 (confirmado via createmeta)
@@ -98,6 +131,57 @@ resolver.define('getEspacios', async () => {
   }
 });
 
+
+resolver.define('createBulkIssue', async ({ payload }) => {
+  const { row, espacios } = payload;
+
+  const mapVal = (v) =>
+    BULK_VALUE_MAP[(v || '').trim().toLowerCase().replace(/\s+/g, '')] ||
+    '🟢 ⚪ ⚪ Sin Incidencias';
+
+  const proyecto = (row['Proyecto'] || '').trim();
+  const fecha = (row['Fecha'] || '').trim();
+  const descripcion = (row['Descripcion'] || '').trim();
+
+  const espacioKey = (espacios || []).find(
+    e => e.label.toLowerCase() === proyecto.toLowerCase()
+  )?.key;
+
+  const fields = {
+    project: { key: 'SDE' },
+    issuetype: { id: '10063' },
+    summary: `Seguimiento - ${proyecto} - ${fecha}`,
+  };
+
+  if (espacioKey) fields.customfield_10258 = [{ key: espacioKey }];
+  if (fecha) fields.customfield_10259 = fecha;
+
+  Object.entries(BULK_FIELD_MAP).forEach(([col, fieldId]) => {
+    fields[fieldId] = { value: mapVal(row[col]) };
+  });
+
+  if (descripcion) {
+    fields.description = {
+      version: 1,
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: descripcion }] }],
+    };
+  }
+
+  const response = await api.asApp().requestJira(route`/rest/api/3/issue`, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(err.substring(0, 300));
+  }
+
+  const data = await response.json();
+  return { issueKey: data.key };
+});
 
 resolver.define('createIssue', async ({ payload }) => {
   const { formData } = payload;

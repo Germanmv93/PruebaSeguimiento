@@ -5,6 +5,7 @@ import IndicatorGroup from './components/IndicatorGroup';
 import SLASection from './components/SLASection';
 import DetailsSection from './components/DetailsSection';
 import DetailPopup from './components/DetailPopup';
+import BulkUpload from './components/BulkUpload';
 
 const CLIENTE_FIELDS = [
   { id: 'customfield_10260', label: 'Cobro',          detailId: 'customfield_10289' },
@@ -62,6 +63,7 @@ const buildInitialState = () => {
 };
 
 function App() {
+  const [activeTab, setActiveTab] = useState('individual');
   const [formData, setFormData] = useState(buildInitialState);
   const [espacios, setEspacios] = useState([]);
   const [loadingEspacios, setLoadingEspacios] = useState(true);
@@ -158,7 +160,29 @@ function App() {
         Proyecto SDE · Registra el estado de los indicadores del período
       </p>
 
-      <div className="legend">
+      {/* Pestañas */}
+      <div className="tabs-nav">
+        <button
+          type="button"
+          className={`tab-btn${activeTab === 'individual' ? ' active' : ''}`}
+          onClick={() => setActiveTab('individual')}
+        >
+          Nuevo seguimiento
+        </button>
+        <button
+          type="button"
+          className={`tab-btn${activeTab === 'bulk' ? ' active' : ''}`}
+          onClick={() => setActiveTab('bulk')}
+        >
+          Carga masiva CSV
+        </button>
+      </div>
+
+      {activeTab === 'bulk' && (
+        <BulkUpload espacios={espacios} />
+      )}
+
+      {activeTab === 'individual' && <div className="legend">
         <span className="legend-title">Referencia:</span>
         <span className="legend-item"><span className="legend-dot green" /> Sin Incidencias</span>
         <span className="legend-item"><span className="legend-dot yellow" /> Observación</span>
@@ -287,6 +311,7 @@ function App() {
           )}
         </button>
       </div>
+      </div>}
     </div>
   );
 }
