@@ -1,15 +1,22 @@
 import React from 'react';
 
 const OPTIONS = [
-  { value: 'Sin Incidencias', color: 'green', tooltip: 'Sin Incidencias' },
-  { value: 'Observación',     color: 'yellow', tooltip: 'Observación' },
-  { value: 'Riesgo o Problema', color: 'red',  tooltip: 'Riesgo o Problema' },
+  { value: 'Sin Incidencias',   color: 'green',  tooltip: 'Sin Incidencias' },
+  { value: 'Observación',       color: 'yellow', tooltip: 'Observación' },
+  { value: 'Riesgo o Problema', color: 'red',    tooltip: 'Riesgo o Problema' },
 ];
 
-function TrafficLight({ fieldId, label, value, onChange }) {
+function TrafficLight({ fieldId, label, value, onChange, hasDetail, onLabelClick }) {
   return (
     <div className="tl-row">
-      <span className="tl-label" title={label}>{label}</span>
+      <span
+        className={`tl-label tl-label-btn${hasDetail ? ' has-detail' : ''}`}
+        onClick={() => onLabelClick && onLabelClick(fieldId, label)}
+        title={hasDetail ? 'Tiene detalle — clic para editar' : 'Clic para añadir detalle'}
+      >
+        {label}
+        {hasDetail && <span className="detail-dot" />}
+      </span>
       <div className="tl-circles">
         {OPTIONS.map((opt) => (
           <button

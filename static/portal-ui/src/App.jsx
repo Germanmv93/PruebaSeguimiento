@@ -4,31 +4,32 @@ import './styles.css';
 import IndicatorGroup from './components/IndicatorGroup';
 import SLASection from './components/SLASection';
 import DetailsSection from './components/DetailsSection';
+import DetailPopup from './components/DetailPopup';
 
 const CLIENTE_FIELDS = [
-  { id: 'customfield_10260', label: 'Cobro' },
-  { id: 'customfield_10261', label: 'Facturación' },
-  { id: 'customfield_10264', label: 'Renovación' },
-  { id: 'customfield_10265', label: 'Confianza' },
-  { id: 'customfield_10266', label: 'R. producción' },
-  { id: 'customfield_10267', label: 'R. comercial' },
-  { id: 'customfield_10268', label: 'Localización' },
-  { id: 'customfield_10269', label: 'Oportunidades' },
+  { id: 'customfield_10260', label: 'Cobro',          detailId: 'customfield_10289' },
+  { id: 'customfield_10261', label: 'Facturación',    detailId: 'customfield_10290' },
+  { id: 'customfield_10264', label: 'Renovación',     detailId: 'customfield_10291' },
+  { id: 'customfield_10265', label: 'Confianza',      detailId: 'customfield_10292' },
+  { id: 'customfield_10266', label: 'R. producción',  detailId: 'customfield_10293' },
+  { id: 'customfield_10267', label: 'R. comercial',   detailId: 'customfield_10294' },
+  { id: 'customfield_10268', label: 'Localización',   detailId: 'customfield_10295' },
+  { id: 'customfield_10269', label: 'Oportunidades',  detailId: 'customfield_10296' },
 ];
 
 const PROYECTO_FIELDS = [
-  { id: 'customfield_10270', label: 'Calidad' },
-  { id: 'customfield_10271', label: 'Planificación' },
-  { id: 'customfield_10272', label: 'Margen' },
-  { id: 'customfield_10273', label: 'Alcance' },
+  { id: 'customfield_10270', label: 'Calidad',       detailId: 'customfield_10297' },
+  { id: 'customfield_10271', label: 'Planificación', detailId: 'customfield_10298' },
+  { id: 'customfield_10272', label: 'Margen',        detailId: 'customfield_10299' },
+  { id: 'customfield_10273', label: 'Alcance',       detailId: 'customfield_10300' },
 ];
 
 const EQUIPO_FIELDS = [
-  { id: 'customfield_10274', label: 'Estado ánimo' },
-  { id: 'customfield_10275', label: 'Cohesión' },
-  { id: 'customfield_10276', label: 'Capacidad' },
-  { id: 'customfield_10277', label: 'Fuga talento' },
-  { id: 'customfield_10278', label: 'Conocimiento' },
+  { id: 'customfield_10274', label: 'Estado ánimo',  detailId: 'customfield_10301' },
+  { id: 'customfield_10275', label: 'Cohesión',      detailId: 'customfield_10302' },
+  { id: 'customfield_10276', label: 'Capacidad',     detailId: 'customfield_10303' },
+  { id: 'customfield_10277', label: 'Fuga talento',  detailId: 'customfield_10304' },
+  { id: 'customfield_10278', label: 'Conocimiento',  detailId: 'customfield_10305' },
 ];
 
 const ALL_INDICATOR_IDS = [
@@ -67,6 +68,18 @@ function App() {
   const [showDetails, setShowDetails] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [popup, setPopup] = useState(null); // { fieldId, detailId, label }
+
+  // Mapa fieldId → detailId para el popup
+  const DETAIL_MAP = Object.fromEntries(
+    [...CLIENTE_FIELDS, ...PROYECTO_FIELDS, ...EQUIPO_FIELDS]
+      .map(f => [f.id, f.detailId])
+  );
+
+  const handleLabelClick = (fieldId, label) => {
+    const detailId = DETAIL_MAP[fieldId];
+    if (detailId) setPopup({ fieldId, detailId, label });
+  };
 
   useEffect(() => {
     invoke('getEspacios')
@@ -196,6 +209,7 @@ function App() {
           fields={CLIENTE_FIELDS}
           formData={formData}
           onChange={handleChange}
+          onLabelClick={handleLabelClick}
         />
         <IndicatorGroup
           title="Indicadores PROYECTO"
@@ -204,6 +218,7 @@ function App() {
           fields={PROYECTO_FIELDS}
           formData={formData}
           onChange={handleChange}
+          onLabelClick={handleLabelClick}
         />
         <IndicatorGroup
           title="Indicadores EQUIPO"
@@ -212,8 +227,18 @@ function App() {
           fields={EQUIPO_FIELDS}
           formData={formData}
           onChange={handleChange}
+          onLabelClick={handleLabelClick}
         />
       </div>
+
+      {popup && (
+        <DetailPopup
+          fieldLabel={popup.label}
+          value={formData[popup.detailId]}
+          onSave={(text) => handleChange(popup.detailId, text)}
+          onClose={() => setPopup(null)}
+        />
+      )}
 
       <SLASection
         formData={formData}

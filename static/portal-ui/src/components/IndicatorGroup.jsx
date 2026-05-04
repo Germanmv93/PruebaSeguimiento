@@ -1,7 +1,7 @@
 import React from 'react';
 import TrafficLight from './TrafficLight';
 
-function IndicatorGroup({ title, icon, colorClass, fields, formData, onChange }) {
+function IndicatorGroup({ title, icon, colorClass, fields, formData, onChange, onLabelClick }) {
   return (
     <div className={`indicator-group ${colorClass}`}>
       <div className="group-header">
@@ -16,6 +16,8 @@ function IndicatorGroup({ title, icon, colorClass, fields, formData, onChange })
             label={field.label}
             value={formData[field.id]}
             onChange={onChange}
+            hasDetail={!!(formData[field.detailId] && formData[field.detailId].trim())}
+            onLabelClick={onLabelClick}
           />
         ))}
       </div>
