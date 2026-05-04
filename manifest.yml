@@ -6,7 +6,7 @@ modules:
       resource: portal-ui
       resolver:
         function: main
-  jiraServiceManagement:portalRequestCreatePanel:
+  jiraServiceManagement:portalRequestCreatePropertyPanel:
     - key: seguimiento-portal-panel
       title: Seguimiento de Servicios
       resource: portal-ui
