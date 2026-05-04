@@ -72,6 +72,16 @@ resolver.define('debugAssets', async () => {
   }
 });
 
+const fetchTypePage = async (workspaceId, typeId, page) => {
+  const r = await api.asApp().requestJira(
+    route`/jsm/assets/workspace/${workspaceId}/v1/objecttype/${typeId}/objects?page=${page}&asc=1&orderByTypeAttributeId=0`,
+    { headers: { 'Accept': 'application/json' } }
+  );
+  if (!r.ok) return [];
+  const d = await r.json();
+  return d.values || d.objectEntries || [];
+};
+
 resolver.define('getEspacios', async () => {
   try {
     // Paso 1: obtener workspaceId de Assets
@@ -91,36 +101,20 @@ resolver.define('getEspacios', async () => {
       return { espacios: [], debug: `no_ws:${JSON.stringify(wsData).substring(0, 80)}` };
     }
 
-    // Paso 2: fetch en paralelo de las 4 primeras páginas
-    const fetchPage = async (startAt) => {
-      const r = await api.asApp().requestJira(
-        route`/jsm/assets/workspace/${workspaceId}/v1/object/aql`,
-        {
-          method: 'POST',
-          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            qlQuery: 'objectType = "Informacion de Proyecto" ORDER BY Name ASC',
-            startAt,
-            maxResults: 25,
-          }),
-        }
-      );
-      if (!r.ok) return [];
-      const d = await r.json();
-      return d.values || d.objectEntries || [];
-    };
+    // Paso 2: usar endpoint directo del tipo 43 con paginación por página (no startAt)
+    const OBJECT_TYPE_ID = 43;
+    const allItems = [];
 
-    const page0 = await fetchPage(0);
-    let allItems = [...page0];
+    const [p1, p2, p3, p4] = await Promise.all([
+      fetchTypePage(workspaceId, OBJECT_TYPE_ID, 1),
+      fetchTypePage(workspaceId, OBJECT_TYPE_ID, 2),
+      fetchTypePage(workspaceId, OBJECT_TYPE_ID, 3),
+      fetchTypePage(workspaceId, OBJECT_TYPE_ID, 4),
+    ]);
 
-    if (page0.length === 25) {
-      const [page1, page2, page3] = await Promise.all([
-        fetchPage(25), fetchPage(50), fetchPage(75),
-      ]);
-      allItems = [...page0, ...page1, ...page2, ...page3];
-    }
+    allItems.push(...p1, ...p2, ...p3, ...p4);
 
-    // Deduplicar por objectKey para evitar repetidos cuando la API recicla páginas
+    // Deduplicar por objectKey
     const seen = new Set();
     const unique = allItems.filter(obj => {
       const key = obj.objectKey || obj.id;
@@ -128,6 +122,8 @@ resolver.define('getEspacios', async () => {
       seen.add(key);
       return true;
     });
+
+    unique.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
 
     return {
       espacios: unique.map(obj => ({
