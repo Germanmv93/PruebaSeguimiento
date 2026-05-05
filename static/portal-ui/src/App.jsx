@@ -88,9 +88,8 @@ function App() {
   useEffect(() => {
     view.getContext()
       .then(ctx => {
-        const rtId = String(ctx?.extension?.requestType?.id ?? '');
-        setDebugRtId(rtId || '(vacío)');
-        setAllowedRequestType(true); // temporal: mostrar siempre para debug
+        setDebugRtId(JSON.stringify(ctx?.extension ?? ctx));
+        setAllowedRequestType(true);
       })
       .catch(err => {
         setDebugRtId('error: ' + err.message);
