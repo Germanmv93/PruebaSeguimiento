@@ -72,6 +72,7 @@ function App() {
   const [result, setResult] = useState(null);
   const [popup, setPopup] = useState(null); // { fieldId, detailId, label }
   const [allowedRequestType, setAllowedRequestType] = useState(null);
+  const [debugRtId, setDebugRtId] = useState('cargando...');
 
   // Mapa fieldId → detailId para el popup
   const DETAIL_MAP = Object.fromEntries(
@@ -88,9 +89,13 @@ function App() {
     view.getContext()
       .then(ctx => {
         const rtId = String(ctx?.extension?.requestType?.id ?? '');
-        setAllowedRequestType(rtId === '103');
+        setDebugRtId(rtId || '(vacío)');
+        setAllowedRequestType(true); // temporal: mostrar siempre para debug
       })
-      .catch(() => setAllowedRequestType(true));
+      .catch(err => {
+        setDebugRtId('error: ' + err.message);
+        setAllowedRequestType(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -167,6 +172,7 @@ function App() {
 
   return (
     <div className="app-container">
+      <p style={{fontSize:'11px',color:'#888',marginBottom:'4px'}}>DEBUG requestType.id: {debugRtId}</p>
       <h1 className="page-title">Seguimiento de Servicios</h1>
       <p className="page-subtitle">
         Proyecto SDE · Registra el estado de los indicadores del período
