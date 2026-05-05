@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { invoke } from '@forge/bridge';
+import { invoke, view } from '@forge/bridge';
 import './styles.css';
 import IndicatorGroup from './components/IndicatorGroup';
 import SLASection from './components/SLASection';
@@ -71,6 +71,7 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [popup, setPopup] = useState(null); // { fieldId, detailId, label }
+  const [allowedRequestType, setAllowedRequestType] = useState(null);
 
   // Mapa fieldId → detailId para el popup
   const DETAIL_MAP = Object.fromEntries(
@@ -82,6 +83,15 @@ function App() {
     const detailId = DETAIL_MAP[fieldId];
     if (detailId) setPopup({ fieldId, detailId, label });
   };
+
+  useEffect(() => {
+    view.getContext()
+      .then(ctx => {
+        const rtId = String(ctx?.extension?.requestType?.id ?? '');
+        setAllowedRequestType(rtId === '103');
+      })
+      .catch(() => setAllowedRequestType(true));
+  }, []);
 
   useEffect(() => {
     invoke('getEspacios')
@@ -152,6 +162,8 @@ function App() {
       </div>
     );
   }
+
+  if (allowedRequestType === null || allowedRequestType === false) return null;
 
   return (
     <div className="app-container">

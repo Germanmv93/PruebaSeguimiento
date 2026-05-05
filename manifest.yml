@@ -12,8 +12,6 @@ modules:
       resource: portal-ui
       resolver:
         function: main
-      requestTypes:
-        - 103
   function:
     - key: main
       handler: index.handler
